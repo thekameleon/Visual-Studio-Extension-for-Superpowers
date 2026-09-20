@@ -1,0 +1,8 @@
+# Copilot Instructions
+
+## Project Guidelines
+- TheKameleon Superpowers must use C#, not Visual Basic, and target .NET 8 across all projects. Use net8.0 for portable libraries/unit tests and net8.0-windows8.0 for the modern extension and its integration tests; use C#12 for .NET 8 SDK compatibility. Prefer .NET 8 where needed for compatibility with the chosen VisualStudio.Extensibility SDK.
+- TheKameleon Superpowers automation must use supported Copilot APIs only, with manual fallback when unavailable; do not introduce other AI providers. Full automation may build, test, edit within agreed scope, and run explicitly allowlisted custom commands in a trusted workspace.
+- TheKameleon Superpowers requirements: users can choose Guided, Approval-required automation, or Full automation modes. A prompt preview/copy fallback is acceptable when supported direct Copilot handoff is unavailable. The first release must support and test Visual Studio 2022 17.14+ and Visual Studio 2026.
+- For the Superpowers Visual Studio adapter, bundle all existing upstream releases, including stable releases and prereleases, with each VSIX release. Let users select a bundled version or download newer upstream releases independently; future VSIX releases should refresh the bundled catalog.
+- Prefer adapting canonical upstream Superpowers skills rather than recreating its methodology or inventing a replacement skill format. Finish and approve the complete upstream-reuse implementation plan before further product coding.

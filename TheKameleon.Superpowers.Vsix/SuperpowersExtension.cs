@@ -1,0 +1,27 @@
+using Microsoft.VisualStudio.Extensibility;
+using Microsoft.VisualStudio.Extensibility.Commands;
+
+namespace TheKameleon.Superpowers.Vsix
+{
+    [VisualStudioContribution]
+    public sealed class SuperpowersExtension : Extension
+    {
+        [VisualStudioContribution]
+        public static MenuConfiguration SuperpowersMenu => new("%Superpowers.Menu.DisplayName%")
+        {
+            Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
+            Children = [MenuChild.Command<PlanCommand>()],
+        };
+
+        public override ExtensionConfiguration ExtensionConfiguration => new()
+        {
+            RequiresInProcessHosting = false,
+            Metadata = new(
+                id: "TheKameleon.Superpowers.Vsix.8a7fab37-7cfc-4314-ae3c-946698f3ff5d",
+                version: this.ExtensionAssemblyVersion,
+                publisherName: "TheKameleon",
+                displayName: "Superpowers for Visual Studio",
+                description: "Superpowers structured AI-assisted development workflows for Visual Studio."),
+        };
+    }
+}
