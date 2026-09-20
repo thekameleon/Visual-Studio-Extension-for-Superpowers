@@ -1,0 +1,1 @@
+# TheKameleon.Superpowers.Vsix
