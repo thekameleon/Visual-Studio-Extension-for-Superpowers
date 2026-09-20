@@ -152,5 +152,10 @@ or delete IDE caches as a first step. If the labels remain unresolved on `1.0.1.
 launch the experimental instance with `/Log` and capture the exact labels and activity
 log for further diagnosis. The versioned update still needs this runtime verification.
 
+Update: the VS 2026 experimental instance now resolves **TheKameleon Superpowers** and
+**Plan** correctly on version `1.0.1.0`, and the **Superpowers** window opens, reuses a
+single tab on repeat invocation, and reopens after closing. Equivalent VS 2022 host
+verification is still pending.
+
 See [the replacement specification](docs/superpowers/specs/modern-extension-project.md)
 for scope, security boundaries, and acceptance criteria.

@@ -1,6 +1,4 @@
 <Solution>
-  <Project Path="TheKameleon.Superpowers.Abstractions/TheKameleon.Superpowers.Abstractions.csproj" />
-  <Project Path="TheKameleon.Superpowers.Context/TheKameleon.Superpowers.Context.csproj" />
   <Project Path="TheKameleon.Superpowers.Core/TheKameleon.Superpowers.Core.csproj" />
   <Project Path="TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj" />
   <Project Path="TheKameleon.Superpowers.Skills/TheKameleon.Superpowers.Skills.csproj" />

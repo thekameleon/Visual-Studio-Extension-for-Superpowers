@@ -89,7 +89,7 @@ hard-coded into the loader.
 | TDD | `test-driven-development/SKILL.md` | `/tdd`. Track observed red/green evidence and authorized edits without rewriting the methodology. |
 | Review | `requesting-code-review/SKILL.md`, `receiving-code-review/SKILL.md` | `/review`, `/receive-review`. Capability-gate fresh reviewer/subagent requirements; label manual review honestly rather than claiming independent review. |
 | Verify | `verification-before-completion/SKILL.md` | `/verify`. Bind actual build/test results to source/configuration; do not infer success from a prompt or marker file. |
-| Refactor | Composition of planning as needed, `test-driven-development/SKILL.md`, review and verification | No dedicated upstream Refactor skill in the reviewed tree. Proposed product-specific entry point with an explicitly labeled adapter recipe, not a claimed upstream skill. Approval required in P00.01. |
+| Refactor | Composition of planning as needed, `test-driven-development/SKILL.md`, review and verification | No dedicated upstream Refactor skill in the reviewed tree. Approved product-specific entry point with an explicitly labeled adapter recipe, not a claimed upstream skill. |
 | Finish | `finishing-a-development-branch/SKILL.md` plus verification | `/finish-branch`. Show readiness and explicit next actions; do not automatically commit, merge, push, remove worktrees or delete branches. Unsupported actions remain manual. |
 
 Shared bootstrap: `using-superpowers/SKILL.md` (`/superpowers`). Other reviewed

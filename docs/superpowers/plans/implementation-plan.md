@@ -37,8 +37,10 @@ The foundation specification describes the existing scaffold. This roadmap gover
 | D09 | Adapt canonical upstream Superpowers rather than recreate its methodology or skill format. | Direction approved by user |
 | D10 | Bundle all existing upstream releases, including stable releases and prereleases, at each VSIX release cutoff. | Confirmed by user |
 | D11 | Let users select bundled versions or download newer upstream releases independently; cache locally, preserve selection across VSIX upgrades and pin active runs. | Direction approved by user |
+| D12 | Refactor is a product-specific composition over upstream skills, not a claimed canonical upstream skill. | Approved by user |
+| D13 | Treat `TheKameleon.Superpowers.slnx` as the canonical solution filename. | Approved by user |
 
-Detailed proposals still need phase-level approval: Guided as the default mode, metadata-only history, separate Visual Studio adapter metadata, a Refactor composition, and project/interface boundaries. D10/D11 supersede the single-version bundle and VSIX-only skill update proposal. Each catalog version remains pinned individually. The prior JSON-in-Markdown format and independent methodology engine are superseded, not implemented. Approval of direction is not evidence of runtime compatibility or completion.
+Detailed proposals still need phase-level approval: Guided as the default mode, metadata-only history, separate Visual Studio adapter metadata, and project/interface boundaries. D10/D11 supersede the single-version bundle and VSIX-only skill update proposal. Each catalog version remains pinned individually. The prior JSON-in-Markdown format and independent methodology engine are superseded, not implemented. Approval of direction is not evidence of runtime compatibility or completion.
 
 ## 3. Current baseline: what has actually been done
 
@@ -56,13 +58,13 @@ Detailed proposals still need phase-level approval: Guided as the default mode, 
 | B10 | [ ] Verify runtime behavior on the supported IDE matrix. | Activation, repeat invocation, close/reopen, no-solution operation, accessibility, themes and both IDE versions remain acceptance checks. |
 | B11 | [x] Review pinned upstream Superpowers and the VS Code adapter. | [Review specification](../specs/upstream-superpowers-review.md): source format, licenses, skill mapping, installer/hook risks and proposed adapter boundary. No upstream skills are yet packaged or integrated. |
 
-The working tree also contains a pre-existing solution rename: `TheKameleon.Superpowers.slnx` is on disk while the earlier `TheKameleon.Superpowers.Vsix.slnx` is deleted. Preserve this work; confirm the intended solution filename rather than creating a second solution. No commits are implied by this checklist.
+The working tree contains the approved solution rename: `TheKameleon.Superpowers.slnx` is canonical, and the earlier `TheKameleon.Superpowers.Vsix.slnx` is deleted. Preserve this rename and do not create a second solution. No commits are implied by this checklist.
 
 ## 4. Requirements-to-phase map
 
 | Requirement | Delivery phase(s) | Current status |
 | --- | --- | --- |
-| Eight entry points over upstream skills: Plan, Execute, Debug, TDD, Review, Verify, Refactor, Finish | P03, P04, P07, P08 | Not implemented; Plan command shell only; Refactor is a proposed composition |
+| Eight entry points over upstream skills: Plan, Execute, Debug, TDD, Review, Verify, Refactor, Finish | P03, P04, P07, P08 | Not implemented; Plan command shell only; Refactor is an approved adapter composition |
 | Solution/project/active file/open documents/selection context | P01, P05 | Not implemented |
 | Build errors, compiler warnings and test failures | P01, P05, P06 | Not implemented |
 | Git branch, status and recent commits | P05 | Not implemented |
@@ -185,10 +187,10 @@ Complexity labels below are relative planning estimates, not date commitments. P
 
 **Prerequisite:** review this roadmap. **Files:** existing VSIX, package tests, README and foundation specification.
 
-- [ ] P00.01 Close remaining detailed roadmap/adapter proposals, including Refactor composition, before further product coding. Upstream reuse and the stable/prerelease catalog with optional future downloads are approved (D09–D11).
-- [ ] P00.02 Confirm the intended solution filename and preserve the existing rename when committing repository work.
-- [ ] P00.03 Install the versioned update in an experimental instance and record installed version plus resolved submenu/Plan labels.
-- [ ] P00.04 Verify window activation, repeat invocation, close/reopen and no-solution behavior.
+- [ ] P00.01 Close remaining detailed roadmap/adapter proposals before further product coding. Upstream reuse, the stable/prerelease catalog with optional future downloads and the Refactor composition are approved (D09–D12).
+- [x] P00.02 Confirm the intended solution filename and preserve the existing rename when committing repository work.
+- [x] P00.03 Install the versioned update in an experimental instance and record installed version plus resolved submenu/Plan labels.
+- [x] P00.04 Verify window activation, repeat invocation, close/reopen and no-solution behavior.
 - [ ] P00.05 Record baseline results on VS 2022 17.14 and VS 2026, including edition, architecture, version and reproduction steps for failures.
 
 **Exit:** foundation labels and behavior are verified, or a reproduced blocking defect has a separately approved fix. Do not call the localization incident resolved solely because the version test passes.
@@ -405,7 +407,7 @@ A compatible target framework is necessary but does not establish all of this co
 | R10 | Adapter metadata/settings become a community contract while upstream content evolves. | P02/P03: preserve upstream format; version separate schemas, document diagnostics and test old/unknown versions. |
 | R11 | Upstream updates change skills, references, licenses or helper behavior. | P03: pin hashes, preserve attribution, review dependency closure and never auto-pull or execute helpers. |
 | R12 | Upstream tool requirements or Git actions exceed proven host capabilities/policy. | P01/P06/P08: visible platform adaptations/manual handoff; no fabricated subagents, independent review or enforcement over manual sessions. |
-| R13 | Refactor has no dedicated canonical skill at the reviewed revision. | P00.01/P08.06: approve and label the adapter composition; do not claim it is an upstream skill. |
+| R13 | Refactor has no dedicated canonical skill at the reviewed revision. | Approved via D12; implement and label the adapter composition in P08.06 without claiming it is an upstream skill. |
 | R14 | Bundling every release grows package/storage size and expands licensing and compatibility work. | P03/P11: verify inventory, measure size, preserve per-version notices and label support; seek approval before narrowing catalog scope. |
 | R15 | Downloaded releases may be hostile, unavailable or incompatible. | P03: bounded approved-source downloads, staged validation, safe extraction, explicit selection and preserved rollback; no silent changes to active runs. |
 
@@ -415,7 +417,7 @@ No unsupported API capability is considered approved merely because it appears i
 
 A milestone is done only when its required code compiles, applicable tests pass, edge/failure cases are covered, relevant security concerns are reviewed, documentation is updated, and remaining debt/limits are explicit. A supported-host claim additionally needs host evidence. A public release needs all mandatory phases and explicit release authorization.
 
-**Next action:** complete remaining P00 detailed decisions and foundation verification, then P01 capability validation before product implementation. The user approved upstream reuse and the all-release catalog/download direction (D09–D11); this does not approve unverified APIs or resolve the Refactor composition. No upstream integration is implemented by this documentation work.
+**Next action:** complete the remaining P00 evidence by documenting/defering the VS 2022 baseline, then proceed to P01 capability validation before product implementation. The user approved upstream reuse, the all-release catalog/download direction and the Refactor composition (D09–D12); this does not approve unverified APIs. No upstream integration is implemented by this documentation work.
 
 ### Progress update record
 
@@ -426,6 +428,8 @@ A milestone is done only when its required code compiles, applicable tests pass,
 | Upstream review / roadmap rebase | B11 complete: pinned source/license review and skill-to-adapter mapping documented. Replaced JSON-in-Markdown/custom-methodology assumptions; retained existing task IDs and unverified product status. Product code remains unchanged. |
 | Rebase validation | 23 local Markdown links resolved; all 81 phase task IDs are unique and continuous; whitespace checks passed. C#/project/XAML SHA-256 snapshot unchanged (`B1179A2A3F2E2103C75D2861C831B71579589AD3911868B1D3CDCCFFD0ED641B`). Fresh workspace build succeeded; 14/14 existing tests passed on .NET 8.0.31 (13 package cases plus one empty unit test). No upstream integration or host-runtime claims follow from these results. |
 | Release-catalog direction approved | User confirmed stable releases and prereleases, then approved the direction. D09–D11 replace the single-version/VSIX-only update proposal. Added P03.07–P03.10 and P07.08; existing task IDs preserved. No product implementation changed. |
-| Remaining immediate gate | Detailed P00 proposals and runtime verification, especially installed 1.0.1.0 localization, followed by P01 capability evidence. |
+| P00 approval updates | User approved Refactor as an adapter composition (D12), confirmed `TheKameleon.Superpowers.slnx` as canonical (D13), and chose VS2026 runtime verification now with VS2022 deferred. P00.02 is complete; VS2022 remains the only deferred part of P00.05. |
+| VS2026 runtime verification | `TheKameleon.Superpowers.slnx` built successfully; generated VSIX version `1.0.1.0` was installed into the VS 2026 experimental instance with `VSIXInstaller.exe /rootSuffix:Exp` exit code `0`. UI Automation verified the resolved **Extensions > TheKameleon Superpowers > Plan** path, enabled `Plan` command, one **Superpowers** tab on first and repeated invocation, the expected status text (**Superpowers is active. Plan workflow is not implemented yet.**), close/reopen behavior, and no-solution operation in the experimental instance. Debug logs confirmed the out-of-process extensibility host was running. |
+| Remaining immediate gate | Record the deferred VS 2022 baseline evidence for P00.05, then proceed to P01 capability evidence. |
 
 Append subsequent milestone records with task IDs, changed files, tests run, host/SDK versions where relevant, and known limitations. Keep the checklist and README current in the same change as the implementation.
