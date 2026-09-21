@@ -10,7 +10,14 @@ namespace TheKameleon.Superpowers.Vsix
         public static MenuConfiguration SuperpowersMenu => new("%Superpowers.Menu.DisplayName%")
         {
             Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
-            Children = [MenuChild.Command<PlanCommand>()],
+            Children =
+            [
+                MenuChild.Command<PlanCommand>(),
+                MenuChild.Command<ContextProbeCommand>(),
+                MenuChild.Command<PublishDiagnosticProbeCommand>(),
+                MenuChild.Command<ClearDiagnosticProbeCommand>(),
+                MenuChild.Command<BuildProbeCommand>(),
+            ],
         };
 
         public override ExtensionConfiguration ExtensionConfiguration => new()
@@ -18,7 +25,7 @@ namespace TheKameleon.Superpowers.Vsix
             RequiresInProcessHosting = false,
             Metadata = new(
                 id: "TheKameleon.Superpowers.Vsix.8a7fab37-7cfc-4314-ae3c-946698f3ff5d",
-                version: this.ExtensionAssemblyVersion,
+                version: new System.Version(1, 0, GeneratedBuildVersion.Build, GeneratedBuildVersion.Revision),
                 publisherName: "TheKameleon",
                 displayName: "Superpowers for Visual Studio",
                 description: "Superpowers structured AI-assisted development workflows for Visual Studio."),

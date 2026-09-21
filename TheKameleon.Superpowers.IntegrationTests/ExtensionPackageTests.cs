@@ -94,6 +94,14 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 (string?)dependency.Attribute("Id") == "Microsoft.Framework.NDP");
         }
 
+        [Fact]
+        public void BuildDependencyDoesNotBundleBridgeRuntime()
+        {
+            using var package = OpenPackage();
+            Assert.DoesNotContain(package.Entries, entry =>
+                entry.FullName.Contains("TheKameleon.Superpowers.InProcess", StringComparison.OrdinalIgnoreCase));
+        }
+
         private static ZipArchive OpenPackage()
         {
             var path = Path.Combine(AppContext.BaseDirectory, PackageName);

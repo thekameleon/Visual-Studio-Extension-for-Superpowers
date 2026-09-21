@@ -21,6 +21,11 @@ Refactor composition and runtime/capability gates remain outstanding. This appro
 does not authorize running upstream installers, rewriting user instructions or adding
 unsupported IDE integrations.
 
+The user also approved Guided as the default mode, metadata-only retention by default,
+intact upstream `SKILL.md` layering, and a five-project architecture where most future
+logic lives in Core/Skills rather than in the VSIX. This specification still records
+the implemented shell only; it does not imply those future layers exist yet.
+
 ## Configuration
 
 - Project: `TheKameleon.Superpowers.Vsix/TheKameleon.Superpowers.Vsix.csproj`.
@@ -44,10 +49,10 @@ these declarations are not evidence of runtime testing on all those configuratio
 
 ## Runtime compatibility
 
-Abstractions, Core, Context, Skills, and unit tests target `net8.0`. The extension
-can reference these portable libraries without a target-framework mismatch, but
-this scaffold does not add those references. Matching runtime targets does not
-establish compatibility with every IDE service or Copilot integration API.
+Core, Skills and unit tests target `net8.0`. The extension can reference these
+portable libraries without a target-framework mismatch, but this scaffold does not
+add those references. Matching runtime targets does not establish compatibility with
+every IDE service or Copilot integration API.
 
 Integration tests target `net8.0-windows8.0` to match their Windows-only project
 build dependency. They inspect the generated VSIX rather than loading the extension
@@ -60,7 +65,7 @@ solution require .NET SDK 9.0.200 or later; a newer build SDK does not change th
 
 ## Plan command and tool window
 
-- Menu path: **Extensions > TheKameleon Superpowers > Plan**.
+- Menu path: **Extensions > Superpowers > Plan**.
 - Command and submenu labels reference `.vsextension/string-resources.json` using
   SDK localization tokens; package tests verify both the tokens and English labels.
 - `PlanCommand` forwards cancellation and asynchronously calls the SDK's

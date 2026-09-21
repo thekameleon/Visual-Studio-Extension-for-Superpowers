@@ -9,7 +9,9 @@ namespace TheKameleon.Superpowers.Vsix
     [VisualStudioContribution]
     public sealed class SuperpowersToolWindow : ToolWindow
     {
-        private readonly SuperpowersToolWindowControl control = new();
+        internal static ProbeResultsViewModel ProbeResults { get; } = new();
+
+        private readonly SuperpowersToolWindowControl control = new(ProbeResults);
 
         public SuperpowersToolWindow()
         {

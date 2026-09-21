@@ -1,4 +1,8 @@
 {
+  "Superpowers.BuildProbeCommand.DisplayName": "Probe Selected Project Build",
+  "Superpowers.ClearDiagnosticProbeCommand.DisplayName": "Clear Probe Diagnostic",
+  "Superpowers.ContextProbeCommand.DisplayName": "Probe Context",
   "Superpowers.PlanCommand.DisplayName": "Plan",
+  "Superpowers.PublishDiagnosticProbeCommand.DisplayName": "Publish Probe Diagnostic",
   "Superpowers.Menu.DisplayName": "TheKameleon Superpowers"
 }

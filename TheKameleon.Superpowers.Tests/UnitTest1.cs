@@ -1,11 +1,22 @@
-﻿namespace TheKameleon.Superpowers.Tests
+﻿using TheKameleon.Superpowers.Bridge.Contracts;
+
+namespace TheKameleon.Superpowers.Tests
 {
     public class UnitTest1
     {
         [Fact]
-        public void Test1()
+        public void BridgeProtocolStartsAtVersionOne()
         {
+            Assert.Equal(1, BridgeProtocol.CurrentVersion);
+        }
 
+        [Fact]
+        public void BridgeContractsContainNoVisualStudioTypes()
+        {
+            var contractAssembly = typeof(BridgeProtocol).Assembly;
+
+            Assert.DoesNotContain(contractAssembly.GetReferencedAssemblies(), reference =>
+                reference.Name?.StartsWith("Microsoft.VisualStudio", StringComparison.Ordinal) == true);
         }
     }
 }

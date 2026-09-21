@@ -1,0 +1,109 @@
+<Project>
+  <PropertyGroup>
+	<DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+	<SuperpowersBuildStateDirectory Condition="'$(SuperpowersBuildStateDirectory)' == ''">$(MSBuildThisFileDirectory)..\.superpowers-build</SuperpowersBuildStateDirectory>
+	<SuperpowersBridgeVersionFile Condition="'$(SuperpowersBridgeVersionFile)' == ''">$(MSBuildThisFileDirectory)..\TheKameleon.Superpowers.InProcess\obj\$(Configuration)\superpowers-build-version.txt</SuperpowersBridgeVersionFile>
+  </PropertyGroup>
+  <ItemGroup>
+	<Compile Include="$(MSBuildThisFileDirectory)BuildIdentity.cs" Link="BuildIdentity.cs" />
+  </ItemGroup>
+  <UsingTask TaskName="AllocateSuperpowersBuildVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+	<ParameterGroup>
+	  <StateDirectory ParameterType="System.String" Required="true" />
+	  <BuildVersion ParameterType="System.String" Output="true" />
+	</ParameterGroup>
+	<Task>
+	  <Using Namespace="System" />
+	  <Using Namespace="System.IO" />
+	  <Using Namespace="System.Globalization" />
+	  <Using Namespace="System.Threading" />
+	  <Code Type="Fragment" Language="cs"><![CDATA[
+		Directory.CreateDirectory(StateDirectory);
+		var counterPath = Path.Combine(StateDirectory, "revision.txt");
+		var timer = System.Diagnostics.Stopwatch.StartNew();
+		FileStream gate = null;
+		while (gate == null)
+		{
+			try
+			{
+				gate = new FileStream(Path.Combine(StateDirectory, "revision.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+			}
+			catch (IOException)
+			{
+				if (timer.Elapsed > TimeSpan.FromSeconds(30)) throw;
+				Thread.Sleep(50);
+			}
+		}
+		using (gate)
+		{
+			long previous = File.Exists(counterPath)
+				? long.Parse(File.ReadAllText(counterPath).Trim(), CultureInfo.InvariantCulture)
+				: 0;
+			if (previous < 0 || previous >= 65534L * 65534L)
+				throw new InvalidOperationException("The Superpowers build counter is invalid or exhausted; it must not be reset silently.");
+			long next = previous + 1;
+			BuildVersion = string.Format(CultureInfo.InvariantCulture, "1.0.{0}.{1}", 1 + (next - 1) / 65534, 1 + (next - 1) % 65534);
+			var temporaryPath = counterPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+			try
+			{
+				File.WriteAllText(temporaryPath, next.ToString(CultureInfo.InvariantCulture));
+				if (File.Exists(counterPath)) File.Replace(temporaryPath, counterPath, null);
+				else File.Move(temporaryPath, counterPath);
+			}
+			finally
+			{
+				if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+			}
+		}
+	  ]]></Code>
+	</Task>
+  </UsingTask>
+  <Target Name="SetSuperpowersBuildVersion" BeforeTargets="GetAssemblyVersion"
+		  Condition="'$(DesignTimeBuild)' != 'true'">
+	<AllocateSuperpowersBuildVersion StateDirectory="$(SuperpowersBuildStateDirectory)"
+									Condition="'$(SuperpowersBuildRole)' == 'Owner'">
+	  <Output TaskParameter="BuildVersion" PropertyName="SuperpowersBuildVersion" />
+	</AllocateSuperpowersBuildVersion>
+	<WriteLinesToFile File="$(SuperpowersBridgeVersionFile)" Lines="$(SuperpowersBuildVersion)" Overwrite="true"
+					  Condition="'$(SuperpowersBuildRole)' == 'Owner'" />
+	<Error Condition="'$(SuperpowersBuildRole)' == 'Consumer' And !Exists('$(SuperpowersBridgeVersionFile)')"
+		   Text="Build the bridge dependency before building the modern extension; its shared build version is missing." />
+	<ReadLinesFromFile File="$(SuperpowersBridgeVersionFile)" Condition="'$(SuperpowersBuildRole)' == 'Consumer'">
+	  <Output TaskParameter="Lines" PropertyName="SuperpowersBuildVersion" />
+	</ReadLinesFromFile>
+	<Error Condition="'$(SuperpowersBuildVersion)' == ''" Text="A shared Superpowers build version is required." />
+	<PropertyGroup>
+	  <Version>$(SuperpowersBuildVersion)</Version>
+	  <FileVersion>$(SuperpowersBuildVersion)</FileVersion>
+	  <InformationalVersion>$(SuperpowersBuildVersion)</InformationalVersion>
+	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+	<Message Importance="High" Text="Superpowers build identity: $(MSBuildProjectName) $(SuperpowersBuildVersion) (assembly binding $(AssemblyVersion))." />
+  </Target>
+	<Target Name="GenerateSuperpowersMetadataVersion" BeforeTargets="CoreCompile"
+		  Condition="'$(SuperpowersBuildRole)' == 'Consumer'">
+	<PropertyGroup>
+	  <_SuperpowersMetadataVersion>$(SuperpowersBuildVersion)</_SuperpowersMetadataVersion>
+	  <_SuperpowersMetadataVersion Condition="'$(_SuperpowersMetadataVersion)' == ''">1.0.1.0</_SuperpowersMetadataVersion>
+	  <_SuperpowersMetadataBuild>$([System.Version]::Parse('$(_SuperpowersMetadataVersion)').Build)</_SuperpowersMetadataBuild>
+	  <_SuperpowersMetadataRevision>$([System.Version]::Parse('$(_SuperpowersMetadataVersion)').Revision)</_SuperpowersMetadataRevision>
+	  <_SuperpowersMetadataSource>$(IntermediateOutputPath)SuperpowersBuildVersion.g.cs</_SuperpowersMetadataSource>
+	  <_SuperpowersMetadataSource Condition="'$(DesignTimeBuild)' == 'true'">$(IntermediateOutputPath)SuperpowersBuildVersion.designtime.g.cs</_SuperpowersMetadataSource>
+	</PropertyGroup>
+	<WriteLinesToFile File="$(_SuperpowersMetadataSource)" Overwrite="true" WriteOnlyWhenDifferent="true"
+					  Lines="namespace TheKameleon.Superpowers { internal static class GeneratedBuildVersion { public const int Build = $(_SuperpowersMetadataBuild)%3B public const int Revision = $(_SuperpowersMetadataRevision)%3B } }" />
+	<ItemGroup>
+	  <Compile Include="$(_SuperpowersMetadataSource)" />
+	  <FileWrites Include="$(_SuperpowersMetadataSource)" />
+	</ItemGroup>
+  </Target>
+  <Target Name="StampSuperpowersBridgeManifest" AfterTargets="DetokenizeVsixManifestFile"
+		  Condition="'$(DesignTimeBuild)' != 'true' And '$(SuperpowersBuildRole)' == 'Owner'">
+	<ReadLinesFromFile File="$(SuperpowersBridgeVersionFile)">
+	  <Output TaskParameter="Lines" PropertyName="_SuperpowersManifestVersion" />
+	</ReadLinesFromFile>
+	<XmlPoke XmlInputPath="$(IntermediateVsixManifest)"
+			 Query="/*[local-name()='PackageManifest']/*[local-name()='Metadata']/*[local-name()='Identity']/@Version"
+			 Value="$(_SuperpowersManifestVersion)" />
+  </Target>
+</Project>

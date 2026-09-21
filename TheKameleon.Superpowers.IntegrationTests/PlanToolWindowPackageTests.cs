@@ -9,7 +9,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
     public class PlanToolWindowPackageTests
     {
         [Fact]
-        public void LocalizedPackageUsesNewVersionMatchingItsAssembly()
+        public void LocalizedPackageUsesNewFileVersionWithStableAssemblyIdentity()
         {
             using var package = OpenPackage();
             using var manifestStream = OpenRequiredEntry(package, "extension.vsixmanifest");
@@ -26,7 +26,14 @@ namespace TheKameleon.Superpowers.IntegrationTests
             assemblyStream.CopyTo(assembly);
             assembly.Position = 0;
             using var peReader = new PEReader(assembly);
-            Assert.Equal(packageVersion, peReader.GetMetadataReader().GetAssemblyDefinition().Version);
+            var metadata = peReader.GetMetadataReader();
+            var definition = metadata.GetAssemblyDefinition();
+            Assert.Equal(new Version(1, 0, 1, 0), definition.Version);
+            var fileVersion = Assert.Single(definition.GetCustomAttributes(), handle =>
+                GetAttributeTypeName(metadata, handle) == "AssemblyFileVersionAttribute");
+            var reader = metadata.GetBlobReader(metadata.GetCustomAttribute(fileVersion).Value);
+            Assert.Equal(1, reader.ReadUInt16());
+            Assert.Equal(packageVersion, Version.Parse(reader.ReadSerializedString()!));
         }
 
         [Fact]
@@ -41,6 +48,25 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var command = Assert.Single(commands, command =>
                 command.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.PlanCommand");
             AssertLocalizedDisplayName(package, command, "Superpowers.PlanCommand.DisplayName", "Plan");
+            Assert.Equal("None", command.GetProperty("flags").GetString());
+        }
+
+        [Theory]
+        [InlineData("ContextProbeCommand", "Superpowers.ContextProbeCommand.DisplayName", "Probe Context")]
+        [InlineData("PublishDiagnosticProbeCommand", "Superpowers.PublishDiagnosticProbeCommand.DisplayName", "Publish Probe Diagnostic")]
+        [InlineData("ClearDiagnosticProbeCommand", "Superpowers.ClearDiagnosticProbeCommand.DisplayName", "Clear Probe Diagnostic")]
+        [InlineData("BuildProbeCommand", "Superpowers.BuildProbeCommand.DisplayName", "Probe Selected Project Build")]
+        public void PackageRegistersCapabilityProbeCommand(string typeName, string resourceId, string displayName)
+        {
+            using var package = OpenPackage();
+            using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
+            using var registration = JsonDocument.Parse(stream);
+            var commands = registration.RootElement.GetProperty("commandSets").EnumerateArray()
+                .SelectMany(commandSet => commandSet.GetProperty("commands").EnumerateArray());
+
+            var command = Assert.Single(commands, command =>
+                command.GetProperty("name").GetString() == $"TheKameleon.Superpowers.Vsix.{typeName}");
+            AssertLocalizedDisplayName(package, command, resourceId, displayName);
             Assert.Equal("None", command.GetProperty("flags").GetString());
         }
 
@@ -88,7 +114,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
         }
 
         [Fact]
-        public void PackageEmbedsRemoteViewWithStatusMessage()
+        public void PackageEmbedsRemoteViewWithProbeResultBindings()
         {
             using var package = OpenPackage();
             using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
@@ -112,8 +138,58 @@ namespace TheKameleon.Superpowers.IntegrationTests
             XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
             Assert.Equal(presentation + "DataTemplate", view.Root!.Name);
-            Assert.Contains(view.Descendants(presentation + "TextBlock"), element =>
-                (string?)element.Attribute("Text") == "Superpowers is active. Plan workflow is not implemented yet.");
+            var textValues = view.Descendants(presentation + "TextBlock")
+                .Select(element => (string?)element.Attribute("Text"))
+                .ToArray();
+            Assert.Contains("Superpowers capability probes", textValues);
+            Assert.Contains("{Binding Status}", textValues);
+            Assert.Contains("{Binding Details}", textValues);
+            Assert.Contains("{Binding Notes}", textValues);
+        }
+
+        [Fact]
+        public void ProbeResultModelDeclaresRemoteUiSerializationAttributes()
+        {
+            using var package = OpenPackage();
+            using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
+            using var assembly = new MemoryStream();
+            assemblyStream.CopyTo(assembly);
+            assembly.Position = 0;
+            using var peReader = new PEReader(assembly);
+            var metadata = peReader.GetMetadataReader();
+            var type = Assert.Single(metadata.TypeDefinitions
+                .Select(metadata.GetTypeDefinition), candidate =>
+                    metadata.GetString(candidate.Name) == "ProbeResultsViewModel");
+
+            Assert.Contains(type.GetCustomAttributes(), attribute =>
+                GetAttributeTypeName(metadata, attribute) == "DataContractAttribute");
+
+            foreach (var propertyName in new[] { "ProbeName", "Timestamp", "Status", "Details", "Notes" })
+            {
+                var property = Assert.Single(type.GetProperties()
+                    .Select(metadata.GetPropertyDefinition), candidate =>
+                        metadata.GetString(candidate.Name) == propertyName);
+                Assert.Contains(property.GetCustomAttributes(), attribute =>
+                    GetAttributeTypeName(metadata, attribute) == "DataMemberAttribute");
+            }
+        }
+
+        private static string? GetAttributeTypeName(MetadataReader metadata, CustomAttributeHandle handle)
+        {
+            var constructor = metadata.GetCustomAttribute(handle).Constructor;
+            EntityHandle declaringType = constructor.Kind switch
+            {
+                HandleKind.MemberReference => metadata.GetMemberReference((MemberReferenceHandle)constructor).Parent,
+                HandleKind.MethodDefinition => metadata.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType(),
+                _ => default,
+            };
+
+            return declaringType.Kind switch
+            {
+                HandleKind.TypeReference => metadata.GetString(metadata.GetTypeReference((TypeReferenceHandle)declaringType).Name),
+                HandleKind.TypeDefinition => metadata.GetString(metadata.GetTypeDefinition((TypeDefinitionHandle)declaringType).Name),
+                _ => null,
+            };
         }
 
         private static void AssertLocalizedDisplayName(ZipArchive package, JsonElement contribution, string resourceId, string expectedText)

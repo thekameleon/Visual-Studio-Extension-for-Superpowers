@@ -7,10 +7,24 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <TextBlock Text="Plan"
+                <TextBlock Text="Superpowers capability probes"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap" />
-                <TextBlock Text="Superpowers is active. Plan workflow is not implemented yet."
+                <TextBlock Text="{Binding ProbeName}"
+                           Margin="0,8,0,0"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Timestamp}"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Status}"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Details}"
+                           Margin="0,8,0,0"
+                           FontFamily="Consolas"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Notes}"
                            Margin="0,8,0,0"
                            TextWrapping="Wrap" />
             </StackPanel>
