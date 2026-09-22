@@ -17,6 +17,12 @@ namespace TheKameleon.Superpowers.Tests
         }
 
         [Fact]
+        public void BridgeCapabilityEnumAppendsDocumentTextWithoutChangingExistingValues()
+        {
+            Assert.Equal(5, (int)BridgeCapability.DocumentText);
+        }
+
+        [Fact]
         public void BridgeContractsContainNoVisualStudioTypes()
         {
             var contractAssembly = typeof(BridgeProtocol).Assembly;

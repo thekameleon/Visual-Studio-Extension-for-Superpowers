@@ -12,7 +12,8 @@ public sealed record AdapterTaskRecord
         AdapterTaskState state,
         IReadOnlyList<AdapterTaskEvidenceRequirement>? requiredEvidence = null,
         IReadOnlyList<AdapterEvidenceRecord>? evidence = null,
-        IReadOnlyList<ParseDiagnostic>? diagnostics = null)
+        IReadOnlyList<ParseDiagnostic>? diagnostics = null,
+        IReadOnlyList<ActionAttemptRecord>? attempts = null)
     {
         if (string.IsNullOrWhiteSpace(taskId))
         {
@@ -35,6 +36,7 @@ public sealed record AdapterTaskRecord
         RequiredEvidence = (requiredEvidence ?? Array.Empty<AdapterTaskEvidenceRequirement>()).ToArray();
         Evidence = (evidence ?? Array.Empty<AdapterEvidenceRecord>()).ToArray();
         Diagnostics = (diagnostics ?? Array.Empty<ParseDiagnostic>()).ToArray();
+        Attempts = (attempts ?? Array.Empty<ActionAttemptRecord>()).OrderBy(attempt => attempt.AttemptNumber).ToArray();
     }
 
     public string TaskId { get; }
@@ -48,6 +50,8 @@ public sealed record AdapterTaskRecord
     public IReadOnlyList<AdapterEvidenceRecord> Evidence { get; }
 
     public IReadOnlyList<ParseDiagnostic> Diagnostics { get; }
+
+    public IReadOnlyList<ActionAttemptRecord> Attempts { get; }
 
     public bool IsEvidenceGateSatisfied => AdapterEvidenceGateEvaluator.Evaluate(this).IsSatisfied;
 }

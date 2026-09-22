@@ -9,6 +9,9 @@ public static class BridgeCapabilityCatalog
     {
         return new[]
         {
+            Available(
+                BridgeCapability.DocumentText,
+                "Active-document text capture through supported editor snapshot services."),
             Result(
                 BridgeCapability.CompilerDiagnostics,
                 hasRoslynWorkspace,

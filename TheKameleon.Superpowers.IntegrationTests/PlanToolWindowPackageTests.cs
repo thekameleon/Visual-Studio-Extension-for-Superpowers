@@ -56,6 +56,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
         [InlineData("PublishDiagnosticProbeCommand", "Superpowers.PublishDiagnosticProbeCommand.DisplayName", "Publish Probe Diagnostic")]
         [InlineData("ClearDiagnosticProbeCommand", "Superpowers.ClearDiagnosticProbeCommand.DisplayName", "Clear Probe Diagnostic")]
         [InlineData("BuildProbeCommand", "Superpowers.BuildProbeCommand.DisplayName", "Probe Selected Project Build")]
+        [InlineData("BridgeProbeCommand", "Superpowers.BridgeProbeCommand.DisplayName", "Probe Bridge")]
         public void PackageRegistersCapabilityProbeCommand(string typeName, string resourceId, string displayName)
         {
             using var package = OpenPackage();

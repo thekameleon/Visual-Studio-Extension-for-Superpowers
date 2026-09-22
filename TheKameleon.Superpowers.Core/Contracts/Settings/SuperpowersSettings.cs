@@ -14,6 +14,7 @@ public sealed record SuperpowersSettings
         bool enableUpdateChecks = true,
         int maxContextCharacters = 20000,
         int historyRetentionDays = 30,
+        bool retainSensitiveHistoryContent = false,
         IReadOnlyList<ExclusionRule>? exclusions = null,
         CriticalWarningPolicy? criticalWarningPolicy = null)
     {
@@ -48,6 +49,7 @@ public sealed record SuperpowersSettings
         EnableUpdateChecks = enableUpdateChecks;
         MaxContextCharacters = maxContextCharacters;
         HistoryRetentionDays = historyRetentionDays;
+        RetainSensitiveHistoryContent = retainSensitiveHistoryContent;
         Exclusions = (exclusions ?? Array.Empty<ExclusionRule>()).ToArray();
         CriticalWarningPolicy = criticalWarningPolicy ?? new CriticalWarningPolicy();
     }
@@ -63,6 +65,8 @@ public sealed record SuperpowersSettings
     public int MaxContextCharacters { get; }
 
     public int HistoryRetentionDays { get; }
+
+    public bool RetainSensitiveHistoryContent { get; }
 
     public IReadOnlyList<ExclusionRule> Exclusions { get; }
 

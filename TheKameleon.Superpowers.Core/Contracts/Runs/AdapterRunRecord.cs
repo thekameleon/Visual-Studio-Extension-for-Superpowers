@@ -16,7 +16,10 @@ public sealed record AdapterRunRecord
         AdapterRunState state,
         int schemaVersion = CurrentSchemaVersion,
         string? trustBasis = null,
-        IReadOnlyList<AdapterTaskRecord>? tasks = null)
+        IReadOnlyList<AdapterTaskRecord>? tasks = null,
+        SkillCompositionRecord? composition = null,
+        IReadOnlyList<CapabilitySnapshot>? capabilities = null,
+        IReadOnlyList<RunControlRecord>? controls = null)
     {
         if (string.IsNullOrWhiteSpace(runId))
         {
@@ -56,6 +59,9 @@ public sealed record AdapterRunRecord
         SchemaVersion = schemaVersion;
         TrustBasis = trustBasis;
         Tasks = (tasks ?? Array.Empty<AdapterTaskRecord>()).ToArray();
+        Composition = composition;
+        Capabilities = (capabilities ?? Array.Empty<CapabilitySnapshot>()).ToArray();
+        Controls = (controls ?? Array.Empty<RunControlRecord>()).ToArray();
     }
 
     public string RunId { get; }
@@ -73,6 +79,12 @@ public sealed record AdapterRunRecord
     public string? TrustBasis { get; }
 
     public IReadOnlyList<AdapterTaskRecord> Tasks { get; }
+
+    public SkillCompositionRecord? Composition { get; }
+
+    public IReadOnlyList<CapabilitySnapshot> Capabilities { get; }
+
+    public IReadOnlyList<RunControlRecord> Controls { get; }
 
     public bool HasEvidenceGateViolations => Tasks.Any(task => task.State == AdapterTaskState.Completed && !task.IsEvidenceGateSatisfied);
 }

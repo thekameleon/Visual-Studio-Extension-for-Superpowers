@@ -16,6 +16,7 @@ public sealed class SuperpowersSettingsTests
         Assert.True(settings.EnableUpdateChecks);
         Assert.Equal(20000, settings.MaxContextCharacters);
         Assert.Equal(30, settings.HistoryRetentionDays);
+        Assert.False(settings.RetainSensitiveHistoryContent);
         Assert.Empty(settings.Exclusions);
         Assert.False(settings.CriticalWarningPolicy.TreatWarningsAsCritical);
         Assert.Empty(settings.CriticalWarningPolicy.WarningCodes);
@@ -95,6 +96,7 @@ public sealed class SuperpowersSettingsTests
             enableUpdateChecks: false,
             maxContextCharacters: 4096,
             historyRetentionDays: 14,
+            retainSensitiveHistoryContent: true,
             exclusions: new[]
             {
                 new ExclusionRule("**/*.env", isBuiltIn: true),
@@ -112,6 +114,7 @@ public sealed class SuperpowersSettingsTests
         Assert.Equal(settings.EnableUpdateChecks, roundTripped.EnableUpdateChecks);
         Assert.Equal(settings.MaxContextCharacters, roundTripped.MaxContextCharacters);
         Assert.Equal(settings.HistoryRetentionDays, roundTripped.HistoryRetentionDays);
+        Assert.Equal(settings.RetainSensitiveHistoryContent, roundTripped.RetainSensitiveHistoryContent);
         Assert.Equal(settings.Exclusions, roundTripped.Exclusions);
         Assert.Equal(settings.CriticalWarningPolicy.WarningCodes, roundTripped.CriticalWarningPolicy.WarningCodes);
         Assert.Equal(settings.CriticalWarningPolicy.TreatWarningsAsCritical, roundTripped.CriticalWarningPolicy.TreatWarningsAsCritical);
@@ -128,6 +131,7 @@ public sealed class SuperpowersSettingsTests
           "EnableUpdateChecks": true,
           "MaxContextCharacters": 1000,
           "HistoryRetentionDays": 10,
+          "RetainSensitiveHistoryContent": true,
           "Exclusions": [],
           "CriticalWarningPolicy": { "WarningCodes": [] },
           "FutureSetting": "ignored"
@@ -141,5 +145,6 @@ public sealed class SuperpowersSettingsTests
         Assert.Equal(ReleaseChannelFilter.StableOnly, deserialized.ReleaseChannelFilter);
         Assert.Equal(1000, deserialized.MaxContextCharacters);
         Assert.Equal(10, deserialized.HistoryRetentionDays);
+        Assert.True(deserialized.RetainSensitiveHistoryContent);
     }
 }

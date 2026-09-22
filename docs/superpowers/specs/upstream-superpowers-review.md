@@ -45,6 +45,11 @@ API for invoking Copilot Chat, receiving responses or applying edits from an
 out-of-process Visual Studio extension. P01 must prove those capabilities separately
 for Visual Studio 2022 17.14+ and Visual Studio 2026.
 
+If a supported Visual Studio/Copilot handoff API is later proven, GitHub Copilot Chat
+should become the preferred conversation surface for presenting and executing eligible
+upstream workflows. That still does not imply supported response retrieval, edit
+application or subagent/session orchestration; each remains a separate capability gate.
+
 Inspect and preserve dependency closure, not just the top-level skill files. Examples
 include `skills/requesting-code-review/code-reviewer.md`, reviewer prompts,
 `skills/using-superpowers/references/`, and brainstorming's optional visual companion.
@@ -166,6 +171,12 @@ history. Upstream skills own the development methodology. Adapter state records 
 actually happened; it does not parse every sentence into a compulsory state transition
 or pretend to control a separate manual Copilot session.
 
+When supported handoff exists, the adapter should use GitHub Copilot Chat as the
+primary conversation UX and treat the tool window as workflow status, approval,
+fallback and evidence UI. The adapter remains the source of truth for policy,
+capabilities, persistence and verification rather than delegating those concerns to a
+chat transcript.
+
 The three modes govern **extension-owned actions only**. Preview/copy is not execution
 or Copilot acceptance. A manually returned result is user-provided evidence, not a
 trusted IDE test run. Full mode cannot bypass missing APIs or authorize extra tools
@@ -193,11 +204,12 @@ omitting steps or claiming full upstream equivalence.
 
 Validation must cover bundle integrity/provenance/licenses, relative-reference
 closure, unchanged upstream content, malformed or hostile custom metadata, missing
-helpers, unsupported subagents, all three modes, stale evidence, manual handoff and
-no unintended execution/network/instruction-file changes. Existing automated package
-tests do not prove any of these future behaviors. Add catalog completeness (including
-prereleases), offline selection, failed/cancelled/malicious downloads, rollback,
-upgrade selection preservation and active-run pinning tests.
+helpers, unsupported subagents, all three modes, stale evidence, direct Copilot
+handoff when supported, manual handoff/fallback when not supported, and no unintended
+execution/network/instruction-file changes. Existing automated package tests do not
+prove any of these future behaviors. Add catalog completeness (including prereleases),
+offline selection, failed/cancelled/malicious downloads, rollback, upgrade selection
+preservation and active-run pinning tests.
 
 ## Unresolved decisions
 

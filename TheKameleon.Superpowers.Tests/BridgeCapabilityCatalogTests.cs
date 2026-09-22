@@ -25,4 +25,14 @@ public sealed class BridgeCapabilityCatalogTests
         Assert.False(compilerDiagnostics.IsAvailable);
         Assert.Equal("Roslyn VisualStudioWorkspace compilation diagnostics.", compilerDiagnostics.Detail);
     }
+
+    [Fact]
+    public void GetCapabilitiesIncludesActiveDocumentTextCapability()
+    {
+        var result = Assert.Single(BridgeCapabilityCatalog.GetCapabilities(hasRoslynWorkspace: true),
+            capability => capability.Capability == BridgeCapability.DocumentText);
+
+        Assert.True(result.IsAvailable);
+        Assert.Contains("Active-document text capture", result.Detail, StringComparison.OrdinalIgnoreCase);
+    }
 }

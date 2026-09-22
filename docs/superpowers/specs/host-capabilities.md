@@ -11,6 +11,12 @@ This is a capability and fallback document, not a promise that every requested
 integration exists. Public-package inspection and runtime/package observations must be
 preferred over guessed API names. Missing evidence is treated as a gap until proven.
 
+Where a supported Copilot integration becomes available, GitHub Copilot Chat is the
+preferred conversation surface for Superpowers workflows. This document still treats
+prompt handoff, response retrieval, edit application and agent/session automation as
+separate capabilities that each require explicit public evidence before the product can
+claim them.
+
 ## Scope
 
 The first release must support Visual Studio 2022 17.14+ and Visual Studio 2026.
@@ -98,7 +104,7 @@ Primary inspected metadata:
 | Class/method semantic targeting | The out-of-process SDK documents no semantic model, symbol, syntax-tree or compilation contract | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove supported public in-process Roslyn workspace/document mapping and return immutable symbol DTOs; do not load IDE-local implementation DLLs directly |
 | Solution/project/file context-menu placement | Out-of-process `CommandPlacement.KnownPlacements` documents only Tools, View Other Windows and Extensions menus | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove supported public VSSDK command placement on both IDEs; retain the Extensions submenu until verified |
 | Shell prompts/choices | XML docs show shell prompt/selection APIs | Public evidence only | Public evidence only | Likely available | Use for user approvals/settings when needed after probe |
-| Copilot prompt handoff | No Copilot contract in the referenced Extensibility SDK or local NuGet cache; installed product-private Copilot assemblies are not an approved dependency | Unsupported through the approved SDK | Unsupported through the approved SDK | Supported direct handoff unavailable | Use explicit preview/copy/manual handoff |
+| Copilot prompt handoff | No Copilot contract in the referenced Extensibility SDK or local NuGet cache; installed product-private Copilot assemblies are not an approved dependency | Unsupported through the approved SDK | Unsupported through the approved SDK | Supported direct handoff unavailable in the current approved surface | Prefer direct GitHub Copilot Chat handoff only if a future supported API is proven; otherwise use explicit preview/edit/copy/manual handoff |
 | Copilot response retrieval | Installed implementation XML documents responder/session types, but no supported third-party Extensibility contract/package exposes them | Unsupported through the approved SDK | Unsupported through the approved SDK | Supported response retrieval unavailable | Accept explicit manual result import only |
 | Copilot edit application | No supported Copilot edit/session contract in the referenced SDK; installed Copilot implementation DLLs are extension-local | Unsupported through the approved SDK | Unsupported through the approved SDK | Supported Copilot edit integration unavailable | Use extension-owned edits under policy plus manual Copilot handoff |
 | Upstream subagent/tool automation | Installed implementation XML includes agent/subagent concepts and `UnstableInternalApi` types, but no supported Extensibility package exposes session dispatch | Unsupported through the approved SDK | Unsupported through the approved SDK | Out of scope through direct Copilot integration | Manual fallback only; do not reference installed implementation assemblies |
@@ -324,6 +330,49 @@ product workflow logic. Transport, authentication/session binding, cancellation,
 shutdown, reconnection, version negotiation and failure isolation must be proven before
 expanding beyond the first capability spike.
 
+The approved hybrid bridge remains transport-blocked. The repository now contains
+narrow bridge-side DTOs and in-process probe implementations for editor/Roslyn-backed
+capabilities, including active-document text capture, but there is still no proven
+supported VSIX-to-in-process invocation path. No brokered-service, JSON-RPC, named-pipe
+or other transport may be claimed as supported until it is implemented and validated
+through public contracts on both supported IDE families.
+
+For planning purposes, the next acceptable bridge transport shape is a narrow,
+versioned DTO-based request/response channel with explicit capability discovery and
+operation scoping. Its initial approved operation set should remain limited to:
+
+- `GetCapabilities`
+- `GetActiveDocumentText`
+
+The transport must not expose arbitrary service lookup, arbitrary command execution,
+general Roslyn query execution, or workflow logic. It must prove:
+
+1. supported public transport/service acquisition
+2. version negotiation and mismatch handling
+3. request cancellation and IDE shutdown behavior
+4. disconnect/reconnect or unavailable-host behavior
+5. failure isolation without leaking Visual Studio SDK objects across the boundary
+6. compatibility on Visual Studio 2022 17.14+ and Visual Studio 2026
+
+Until that proof exists, the out-of-process collector may use supported APIs for
+document presence, URI/path and selection, but active-document text remains blocked
+for production use and must fall back to truthful metadata-only capture.
+
+The approved concrete design to prove this transport is a custom named-pipe
+(`System.IO.Pipes`) channel rather than any VS-provided broker: a server hosted
+in `TheKameleon.Superpowers.InProcess` alongside `BridgeHost`, and a client
+implementation of `IBridgeClient` in `TheKameleon.Superpowers.Vsix/Bridge`. This
+is built entirely from public .NET APIs — no VS-private service broker,
+reflection over internal assemblies, or COM automation is required — so it
+satisfies the "no private/internal API" constraint while remaining fully
+provable end-to-end. The pipe is scoped per-VS-process (name includes the host
+process id), ACL-restricted to the current Windows user, and carries the same
+versioned DTO envelopes already defined in portable-contracts.md. See
+portable-contracts.md's "Named-pipe transport design" section for the full
+shape. Named pipes are no longer merely one of several unproven options — they
+are the specific transport to implement and validate against the checklist
+below.
+
 The Visual Studio 2026 installation contains extension-local
 `Microsoft.VisualStudio.Copilot.dll` and `Microsoft.VisualStudio.Copilot.Core.dll`
 implementation assemblies. Their XML documentation includes responder/session/agent
@@ -333,6 +382,9 @@ contract, the project resolves no Copilot contract package, and the local NuGet 
 contains no Copilot-named package. These installed implementation DLLs are not an
 approved third-party dependency. P01 therefore selects preview/copy/manual handoff and
 manual result import rather than direct prompt, response, edit or subagent integration.
+If a supported prompt-handoff API appears later, the extension should treat Copilot
+Chat as the preferred UX for eligible workflows while continuing to keep workflow
+state, approvals, privacy boundaries and evidence tracking in extension-owned code.
 
 ## Proposed probe set for the next implementation step
 
@@ -362,7 +414,7 @@ identified or the fallback path is explicitly approved.
 - **Solution/project/file context menus:** retain the Extensions submenu fallback;
   targeted placement remains blocked pending documented public API evidence.
 - **Build/test/host diagnostic reading:** manual or imported evidence only until a supported API is proven.
-- **Copilot integration:** preview/copy/manual handoff remains the approved default until a public API is proven.
+- **Copilot integration:** GitHub Copilot Chat is the preferred UX only when a supported prompt-handoff API is proven; until then, preview/edit/copy/manual handoff remains the approved default. Even after direct handoff is proven, unsupported response/edit/session automation still falls back explicitly rather than being inferred.
 - **Class/method semantic targeting:** do not promise this scope until public semantic APIs are proven.
 
 ## Constraints for implementation

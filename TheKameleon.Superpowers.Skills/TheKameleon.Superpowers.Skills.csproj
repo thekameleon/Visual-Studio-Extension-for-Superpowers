@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TheKameleon.Superpowers.Core\TheKameleon.Superpowers.Core.csproj" />
+    <ProjectReference Include="..\TheKameleon.Superpowers.Bridge.Contracts\TheKameleon.Superpowers.Bridge.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

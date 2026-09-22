@@ -21,9 +21,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MessagePack" Version="3.1.9" />
     <PackageReference Include="Microsoft.VisualStudio.LanguageServices" Version="4.14.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,27 +50,17 @@
   <Import Project="..\build\BridgeDebugDeployment.targets" />
   <Import Project="..\build\SuperpowersBuildVersion.targets" />
 
-  <Target Name="ValidateBridgeDebugDeployment"
-          BeforeTargets="GetVsixDeploymentPath;DeployVsixExtensionFiles"
-          Condition="'$(DeployExtension)' == 'true' Or '$(BridgeDebugDeployment)' == 'true'">
-    <Error Condition="'$(BridgeDebugDeployment)' != 'true'"
-           Text="Bridge deployment requires explicit opt-in. Use scripts/Prepare-BridgeDebug.ps1." />
-    <Error Condition="'$(Configuration)' != 'Debug'"
-           Text="Bridge debug deployment requires Configuration=Debug." />
-    <Error Condition="'$(VSSDKTargetPlatformRegRootSuffix)' != 'Exp'"
-           Text="Bridge debug deployment is restricted to RootSuffix=Exp; normal IDE profiles are not allowed." />
-    <Error Condition="'$(DeployTargetInstanceId)' == ''"
-           Text="Bridge debug deployment requires an explicit DeployTargetInstanceId." />
-    <Error Condition="'$(MSBuildRuntimeType)' != 'Full'"
-           Text="Bridge debug deployment requires Visual Studio MSBuild.exe, not dotnet build." />
-    <Error Condition="'$(DeployExtension)' != 'true' Or '$(CreateVsixContainer)' != 'true'"
-           Text="Bridge debug deployment requires DeployExtension=true and CreateVsixContainer=true." />
+  <Target Name="ValidateBridgeDebugDeployment" BeforeTargets="GetVsixDeploymentPath;DeployVsixExtensionFiles" Condition="'$(DeployExtension)' == 'true' Or '$(BridgeDebugDeployment)' == 'true'">
+    <Error Condition="'$(BridgeDebugDeployment)' != 'true'" Text="Bridge deployment requires explicit opt-in. Use scripts/Prepare-BridgeDebug.ps1." />
+    <Error Condition="'$(Configuration)' != 'Debug'" Text="Bridge debug deployment requires Configuration=Debug." />
+    <Error Condition="'$(VSSDKTargetPlatformRegRootSuffix)' != 'Exp'" Text="Bridge debug deployment is restricted to RootSuffix=Exp; normal IDE profiles are not allowed." />
+    <Error Condition="'$(DeployTargetInstanceId)' == ''" Text="Bridge debug deployment requires an explicit DeployTargetInstanceId." />
+    <Error Condition="'$(MSBuildRuntimeType)' != 'Full'" Text="Bridge debug deployment requires Visual Studio MSBuild.exe, not dotnet build." />
+    <Error Condition="'$(DeployExtension)' != 'true' Or '$(CreateVsixContainer)' != 'true'" Text="Bridge debug deployment requires DeployExtension=true and CreateVsixContainer=true." />
   </Target>
 
-  <Target Name="PrepareBridgeDebug"
-          DependsOnTargets="ValidateBridgeDebugDeployment;Build;DeployVsixExtensionFiles">
-    <Error Condition="'$(BridgeDebugDeployment)' != 'true'"
-           Text="Use scripts/Prepare-BridgeDebug.ps1 to select the experimental instance explicitly." />
+  <Target Name="PrepareBridgeDebug" DependsOnTargets="ValidateBridgeDebugDeployment;Build;DeployVsixExtensionFiles">
+    <Error Condition="'$(BridgeDebugDeployment)' != 'true'" Text="Use scripts/Prepare-BridgeDebug.ps1 to select the experimental instance explicitly." />
   </Target>
 
 </Project>

@@ -29,6 +29,9 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Equal(13, result.Releases.Count);
         var latest = Assert.Single(result.Releases, release => release.ReleaseTag == "v6.4.1");
         Assert.Equal("5bf4e78011075bcfc0dc295f0724994cd123ee71", latest.ResolvedCommit);
+        Assert.NotNull(latest.PlanMetadata);
+        Assert.Equal("Plan", latest.PlanMetadata!.EntryPoint);
+        Assert.Equal(2, latest.PlanMetadata.Composition.Count);
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/brainstorming/SKILL.md");
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/writing-plans/SKILL.md");
     }
@@ -97,6 +100,26 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         }
         """);
 
+        var planMetadataPath = Path.Combine(releaseRoot, "plan-metadata.json");
+        File.WriteAllText(planMetadataPath, """
+        {
+          "schemaVersion": 1,
+          "entryPoint": "Plan",
+          "sourceRepository": "https://example.test/superpowers",
+          "releaseTag": "v1.0.0",
+          "composition": [
+            {
+              "order": 1,
+              "skillPath": "skills/plan/SKILL.md",
+              "purpose": "Draft the plan"
+            }
+          ],
+          "notes": [
+            "Synthetic test metadata"
+          ]
+        }
+        """);
+
         var archivePath = Path.Combine(releaseRoot, "source.zip");
         using (var stream = File.Create(archivePath))
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: false))
@@ -122,7 +145,8 @@ public sealed class BundledCatalogLoaderTests : IDisposable
             {
                 new { path = "source.zip", sha256 = ComputeSha256(archivePath) },
                 new { path = "LICENSE.txt", sha256 = ComputeSha256(licensePath) },
-                new { path = "adapter-manifest.json", sha256 = ComputeSha256(adapterManifestPath) }
+                new { path = "adapter-manifest.json", sha256 = ComputeSha256(adapterManifestPath) },
+                new { path = "plan-metadata.json", sha256 = ComputeSha256(planMetadataPath) }
             }
         };
         File.WriteAllText(provenancePath, JsonSerializer.Serialize(provenance));
@@ -141,6 +165,7 @@ public sealed class BundledCatalogLoaderTests : IDisposable
                     licensePath = "releases/v1.0.0/LICENSE.txt",
                     archivePath = "releases/v1.0.0/source.zip",
                     adapterManifestPath = "releases/v1.0.0/adapter-manifest.json",
+                    planMetadataPath = "releases/v1.0.0/plan-metadata.json",
                     provenancePath = "releases/v1.0.0/provenance.json"
                 }
             }

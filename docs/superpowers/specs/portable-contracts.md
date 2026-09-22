@@ -437,6 +437,127 @@ The design should assume:
 The concrete serializer choice remains open in P02.05, but the contracts should be
 serializer-friendly and avoid host-specific object graphs.
 
+## Bridge transport and invocation contracts
+
+The approved hybrid boundary requires a narrow, versioned bridge transport between
+the out-of-process VSIX host and the in-process VSSDK component. This transport is
+a separate concern from both portable product contracts and in-process editor/Roslyn
+adapters. The first release must keep the transport surface intentionally small and
+must not expose arbitrary service lookup, arbitrary command execution, or general
+Visual Studio object graphs across the process boundary.
+
+Bridge transport contracts should cover at least:
+
+- request/response envelopes with explicit protocol version
+- stable operation identifiers for each approved bridge call
+- request identity/correlation for diagnostics and cancellation
+- structured failure kinds rather than exception-only behavior
+- capability discovery before operation use
+- workspace/session identity binding sufficient to reject stale or mismatched calls
+- deterministic DTO serialization suitable for tests and version negotiation
+
+The initial approved bridge operation set is intentionally narrow:
+
+1. `GetCapabilities`
+2. `GetActiveDocumentText`
+
+The bridge transport contract must not initially include:
+
+- arbitrary Roslyn queries
+- arbitrary file reads
+- arbitrary command execution
+- workflow orchestration commands
+- unrestricted service-broker passthrough
+- product policy or approval decisions
+
+### Bridge request/response envelopes
+
+`TheKameleon.Superpowers.Bridge.Contracts` may define bridge-only request/response
+envelopes separate from the portable product contract layer. At minimum, these
+envelopes should leave room for:
+
+- `ProtocolVersion`
+- `Operation`
+- `RequestId`
+- `WorkspaceId` or equivalent non-secret workspace/session identity
+- request timestamp
+- success/failure flag
+- structured failure kind
+- diagnostic detail safe for logs/UI without leaking document text
+
+A version mismatch must produce a structured failure result rather than undefined
+behavior. For the initial bridge, exact protocol-version matching is acceptable.
+
+### Named-pipe transport design (approved next step)
+
+To remove the previously unproven cross-process gap without depending on any
+Visual Studio-private broker, the approved next transport is a custom
+`System.IO.Pipes` (`NamedPipeServerStream`/`NamedPipeClientStream`) channel built
+entirely from supported, public .NET APIs. This avoids brokered-service,
+RPC-contract or other VS-private infrastructure while still satisfying every
+constraint above.
+
+Shape:
+
+- **Server**: hosted in `TheKameleon.Superpowers.InProcess`, started alongside
+  `BridgeHost` when the VSSDK package loads; listens on a per-VS-process pipe.
+- **Client**: implemented in `TheKameleon.Superpowers.Vsix/Bridge` as a new
+  `IBridgeClient` implementation (e.g. `PipeBridgeClient`) that connects lazily
+  and falls back to `UnavailableBridgeClient` behavior if the pipe cannot be
+  opened.
+- **Pipe naming/scoping**: pipe name includes the hosting Visual Studio process
+  id (and, where available, an instance/session token) so each VS instance
+  binds only to its own in-process bridge and never to another instance's pipe.
+- **Security**: local-machine named pipe only, no network exposure;
+  `PipeSecurity`/ACL restricted to the current Windows user (current identity
+  only, no broader group grants). Cross-user or cross-session connections must
+  be rejected.
+- **Payload**: the same versioned DTO request/response envelopes defined above
+  (`ProtocolVersion`, `Operation`, `RequestId`, `WorkspaceId`, timestamp,
+  success/failure, structured failure kind), serialized with the serializer
+  chosen in P02.05 (JSON initially acceptable) and framed with a length prefix
+  over the pipe stream.
+- **Cancellation/shutdown**: reads/writes must observe `CancellationToken`;
+  server must close the pipe cleanly on IDE shutdown/package unload, and the
+  client must treat a broken/closed pipe as a structured "unavailable" failure
+  rather than an unhandled exception.
+- **Reconnection**: the client may attempt a single reconnect on a broken pipe
+  before falling back to unavailable; it must not retry indefinitely or block
+  the calling context-capture path.
+
+This design must still be proven (see the host-capabilities.md and
+p01-probe-design.md checkpoints) before any bridge-backed document text is
+claimed as supported in production workflows.
+
+### Bridge failure semantics
+
+Bridge transport failures must be modeled explicitly. The contract should support
+at least:
+
+- unavailable
+- unsupported
+- version mismatch
+- cancelled
+- timeout
+- shutdown/disconnected
+- context changed
+- internal error
+
+The VSIX host must convert these failures into honest context states such as
+`Unavailable` or `Partial`; it must not invent captured content or silently report
+success.
+
+### Bridge cancellation, shutdown and privacy rules
+
+Bridge operations must accept cancellation and stop cooperatively during IDE
+shutdown. Failure to complete before cancellation/shutdown is an unavailable or
+cancelled result, not a host crash.
+
+Bridge diagnostics and logs must not capture raw document text by default. Logging
+may include operation name, request identity, timing, protocol version and
+failure category, but not prompt/document payloads unless a later explicitly
+approved diagnostic mode is added.
+
 ## Validation goals for later P02 tasks
 
 Later P02 work should add tests for:

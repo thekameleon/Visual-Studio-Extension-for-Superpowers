@@ -370,6 +370,48 @@ their supported acquisition path remains unproven.
 If supported service acquisition cannot be demonstrated, retain the existing scoped
 runner or manual/imported fallback and do not broaden the bridge.
 
+### Bridge transport design checkpoint
+
+The current bridge feasibility work establishes in-process capability acquisition
+patterns only; it does not establish cross-process invocation. Before production
+features depend on bridge-backed active-document text or other bridge operations,
+the product must define and prove a transport with these properties:
+
+- explicit protocol version on every request/response
+- serializable DTO envelopes only
+- narrow operation list (`GetCapabilities`, `GetActiveDocumentText` first)
+- cancellation and shutdown handling
+- structured failure results for unavailable/version-mismatch/context-changed cases
+- no arbitrary service lookup or command execution
+- no leakage of Visual Studio SDK objects outside the in-process boundary
+
+A bridge transport implementation is not proven merely because the in-process
+package and probe commands load successfully. If supported acquisition of the
+transport cannot be demonstrated, retain metadata-only out-of-process capture
+and do not claim bridge-backed document text in production workflows.
+
+**Chosen transport for this checkpoint**: a custom `System.IO.Pipes`
+named-pipe channel (server in `TheKameleon.Superpowers.InProcess`, client
+implementing `IBridgeClient` in `TheKameleon.Superpowers.Vsix/Bridge`), built
+from public .NET APIs only. This was selected specifically because no usable
+VS-provided broker/transport API was found during assembly inspection, and a
+plain OS/.NET-level named pipe avoids depending on any VS-private or internal
+surface while still being fully provable. Proof work for this checkpoint must
+demonstrate, specifically for the named-pipe implementation:
+
+1. supported public pipe creation/connection APIs on both VS2022 17.14+ and
+   VS2026 (no VS-private broker involved)
+2. version negotiation and structured mismatch handling over the pipe
+3. cancellation-aware reads/writes and clean shutdown on IDE/package unload
+4. disconnect/reconnect behavior (single bounded reconnect attempt, then
+   honest "unavailable" fallback)
+5. failure isolation — no Visual Studio SDK objects or internal exceptions
+   cross the pipe boundary, only structured DTOs
+6. local-user-only ACL enforcement (no cross-session/cross-user connections)
+
+Only after this checklist passes may bridge-backed active-document text be
+claimed as supported in production workflows.
+
 ## Output strategy
 
 The current Superpowers tool window is sufficient for probe output if expanded to show:

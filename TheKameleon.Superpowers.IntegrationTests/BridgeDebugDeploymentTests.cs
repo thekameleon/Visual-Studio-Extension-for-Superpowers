@@ -65,7 +65,8 @@ public sealed class BridgeDebugDeploymentTests
             (string?)import.Attribute("Project") == "..\\build\\BridgeDebugDeployment.targets");
         Assert.Empty(project.Descendants("PreBuildEvent"));
         Assert.Empty(project.Descendants("PostBuildEvent"));
-        var reference = Assert.Single(project.Descendants("ProjectReference"));
+        var reference = Assert.Single(project.Descendants("ProjectReference"), reference =>
+            ((string?)reference.Attribute("Include"))?.Contains("TheKameleon.Superpowers.InProcess", StringComparison.OrdinalIgnoreCase) == true);
         Assert.Contains("InProcess", (string?)reference.Attribute("Include"));
         Assert.Equal("false", (string?)reference.Attribute("ReferenceOutputAssembly"));
         Assert.Equal("true", (string?)reference.Attribute("SkipGetTargetFrameworkProperties"));

@@ -21,6 +21,11 @@ Refactor composition and runtime/capability gates remain outstanding. This appro
 does not authorize running upstream installers, rewriting user instructions or adding
 unsupported IDE integrations.
 
+When later phases add Copilot integration, GitHub Copilot Chat should become the
+preferred conversation surface where a supported Visual Studio/Copilot API can perform
+truthful handoff. The extension shell should remain the orchestration, capability,
+status and fallback layer rather than becoming a separate replacement chat surface.
+
 The user also approved Guided as the default mode, metadata-only retention by default,
 intact upstream `SKILL.md` layering, and a five-project architecture where most future
 logic lives in Core/Skills rather than in the VSIX. This specification still records
@@ -68,10 +73,16 @@ solution require .NET SDK 9.0.200 or later; a newer build SDK does not change th
 - Menu path: **Extensions > Superpowers > Plan**.
 - Command and submenu labels reference `.vsextension/string-resources.json` using
   SDK localization tokens; package tests verify both the tokens and English labels.
-- `PlanCommand` forwards cancellation and asynchronously calls the SDK's
-  `ShowToolWindowAsync<SuperpowersToolWindow>` with activation enabled.
+- `PlanCommand` currently forwards cancellation and asynchronously calls the SDK's
+  `ShowToolWindowAsync<SuperpowersToolWindow>` with activation enabled. In later
+  phases this command should prefer a capability-checked Copilot Chat handoff path and
+  open the tool window as a fallback/status surface when direct supported handoff is
+  unavailable.
 - `SuperpowersToolWindow` has the title **Superpowers** and defaults to the document
   well. Repeated invocation should activate the same logical window, not add instances.
+  This window is currently the only visible UX surface; in later phases it should shift
+  to workflow status, approvals, prompt preview/edit/copy fallback, handoff
+  diagnostics and result-import responsibilities rather than replacing Copilot Chat.
 - The window reuses its Remote UI control and disposes it with the tool window.
 - `SuperpowersToolWindowControl.xaml` is an embedded DataTemplate, not an in-process
   WPF window. It uses host theme colors, wrapping text, and vertical scrolling.
@@ -126,9 +137,11 @@ No new assertion or mocking libraries are needed for these package checks.
 The Plan command only asks the Visual Studio host to display a static Remote UI view.
 It adds no process-launch logic, context transmission, credentials, user-input handling,
 or automatic workflow execution. Registration alone does not authorize executing
-repository instructions. The SDK has transitive dependencies;
-this replacement does not constitute a dependency security audit or a claim about
-all host-managed telemetry behavior.
+repository instructions. Future Copilot Chat integration must still use supported APIs
+only, must not scrape or drive the chat UI like a user, and must keep unsupported
+response/edit/session automation behind explicit fallback behavior. The SDK has
+transitive dependencies; this replacement does not constitute a dependency security
+audit or a claim about all host-managed telemetry behavior.
 
 ## Manual acceptance and deferred work
 
@@ -139,6 +152,7 @@ invoke Plan with and without a solution, verify the status view, repeat the comm
 close/reopen the window, resize, and check theme contrast. Record any host failures
 before treating this as a validated installation.
 
-Deferred: dynamic skills, workflow state, IDE/Git/test context, interactive Remote UI, Copilot
-handoff, behavioral unit tests, full supported-version testing, dependency review,
-and release/Marketplace hardening. The SDK-generated package remains a preview.
+Deferred: dynamic skills, workflow state, IDE/Git/test context, interactive Remote UI,
+Copilot Chat-first handoff with supported-API capability checks, behavioral unit tests,
+full supported-version testing, dependency review, and release/Marketplace hardening.
+The SDK-generated package remains a preview.

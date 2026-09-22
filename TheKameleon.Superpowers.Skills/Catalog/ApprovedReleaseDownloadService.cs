@@ -73,8 +73,11 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
             var adapterManifestPath = Path.Combine(releaseRoot, "adapter-manifest.json");
             await WriteAdapterManifestAsync(adapterManifestPath, cancellationToken).ConfigureAwait(false);
 
+            var planMetadataPath = Path.Combine(releaseRoot, "plan-metadata.json");
+            await WritePlanMetadataAsync(release, planMetadataPath, cancellationToken).ConfigureAwait(false);
+
             var provenancePath = Path.Combine(releaseRoot, "provenance.json");
-            await WriteProvenanceAsync(release, sourceZipPath, licensePath, adapterManifestPath, provenancePath, cancellationToken).ConfigureAwait(false);
+            await WriteProvenanceAsync(release, sourceZipPath, licensePath, adapterManifestPath, planMetadataPath, provenancePath, cancellationToken).ConfigureAwait(false);
 
             var catalogPath = Path.Combine(stagingRoot, "catalog.json");
             await WriteCatalogAsync(release, catalogPath, cancellationToken).ConfigureAwait(false);
@@ -240,6 +243,7 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
         string sourceZipPath,
         string licensePath,
         string adapterManifestPath,
+        string planMetadataPath,
         string provenancePath,
         CancellationToken cancellationToken)
     {
@@ -253,10 +257,36 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
                 new { path = "source.zip", sha256 = ComputeSha256(sourceZipPath) },
                 new { path = "LICENSE.txt", sha256 = ComputeSha256(licensePath) },
                 new { path = "adapter-manifest.json", sha256 = ComputeSha256(adapterManifestPath) },
+                new { path = "plan-metadata.json", sha256 = ComputeSha256(planMetadataPath) },
             }
         };
 
         await File.WriteAllTextAsync(provenancePath, JsonSerializer.Serialize(provenance), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task WritePlanMetadataAsync(
+        DiscoveredRemoteRelease release,
+        string path,
+        CancellationToken cancellationToken)
+    {
+        var planMetadata = new
+        {
+            schemaVersion = PlanEntryPointMetadata.CurrentSchemaVersion,
+            entryPoint = "Plan",
+            sourceRepository = release.SourceRepositoryUrl,
+            releaseTag = release.ReleaseTag,
+            composition = new[]
+            {
+                new { order = 1, skillPath = "skills/brainstorming/SKILL.md", purpose = "Brainstorm the requested work and collect context." },
+                new { order = 2, skillPath = "skills/writing-plans/SKILL.md", purpose = "Write the resulting execution plan." },
+            },
+            notes = new[]
+            {
+                "Generated during approved remote release staging."
+            }
+        };
+
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(planMetadata), cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task WriteCatalogAsync(
@@ -278,6 +308,7 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
                     licensePath = $"releases/{release.ReleaseTag}/LICENSE.txt",
                     archivePath = $"releases/{release.ReleaseTag}/source.zip",
                     adapterManifestPath = $"releases/{release.ReleaseTag}/adapter-manifest.json",
+                    planMetadataPath = $"releases/{release.ReleaseTag}/plan-metadata.json",
                     provenancePath = $"releases/{release.ReleaseTag}/provenance.json",
                 }
             }

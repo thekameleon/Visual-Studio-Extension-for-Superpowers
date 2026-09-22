@@ -17,6 +17,7 @@ namespace TheKameleon.Superpowers.Vsix
                 MenuChild.Command<PublishDiagnosticProbeCommand>(),
                 MenuChild.Command<ClearDiagnosticProbeCommand>(),
                 MenuChild.Command<BuildProbeCommand>(),
+                MenuChild.Command<BridgeProbeCommand>(),
             ],
         };
 

@@ -95,6 +95,8 @@ public static class BundledCatalogLoader
             ? new AdapterManifest(0, Array.Empty<AdapterManifestAction>(), diagnostics.Where(diagnostic => diagnostic.Code == "SPCAT412").ToArray())
             : AdapterManifestParser.Parse(adapterText);
 
+        var planMetadata = LoadPlanMetadata(source, releaseTag, release.PlanMetadataPath, diagnostics);
+
         var provenanceText = ReadRequiredText(source, release.ProvenancePath, diagnostics, "SPCAT413", $"Release '{releaseTag}' is missing its provenance metadata.", MaxProvenanceLength);
         ProvenanceModel? provenance = null;
         if (provenanceText is not null)
@@ -135,9 +137,78 @@ public static class BundledCatalogLoader
             provenance.ResolvedCommit ?? release.ResolvedCommit ?? string.Empty,
             licenseText,
             adapterManifest,
+            planMetadata,
             skills,
             assets.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
             diagnostics);
+    }
+
+    private static PlanEntryPointMetadata? LoadPlanMetadata(
+        ICatalogSource source,
+        string releaseTag,
+        string? planMetadataPath,
+        List<ParseDiagnostic> diagnostics)
+    {
+        var planMetadataText = ReadRequiredText(source, planMetadataPath, diagnostics, "SPCAT424", $"Release '{releaseTag}' is missing its plan metadata.", MaxCatalogLength);
+        if (planMetadataText is null)
+        {
+            return null;
+        }
+
+        PlanMetadataModel? planMetadata;
+        try
+        {
+            planMetadata = JsonSerializer.Deserialize<PlanMetadataModel>(planMetadataText, JsonOptions);
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT425", $"Release '{releaseTag}' plan metadata is not valid JSON: {exception.Message}"));
+            return null;
+        }
+
+        if (planMetadata is null)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT426", $"Release '{releaseTag}' plan metadata is empty."));
+            return null;
+        }
+
+        if (planMetadata.SchemaVersion != PlanEntryPointMetadata.CurrentSchemaVersion)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT427", $"Release '{releaseTag}' plan metadata schema version '{planMetadata.SchemaVersion}' is unsupported."));
+        }
+
+        if (!string.Equals(planMetadata.ReleaseTag, releaseTag, StringComparison.OrdinalIgnoreCase))
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT428", $"Release '{releaseTag}' plan metadata tag '{planMetadata.ReleaseTag ?? string.Empty}' does not match the release tag."));
+        }
+
+        var composition = new List<PlanCompositionStep>();
+        foreach (var step in planMetadata.Composition ?? Array.Empty<PlanCompositionStepModel>())
+        {
+            if (step.Order <= 0 || string.IsNullOrWhiteSpace(step.SkillPath) || string.IsNullOrWhiteSpace(step.Purpose))
+            {
+                diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT429", $"Release '{releaseTag}' plan metadata contains an incomplete composition step."));
+                continue;
+            }
+
+            composition.Add(new PlanCompositionStep(step.Order, step.SkillPath, step.Purpose));
+        }
+
+        try
+        {
+            return new PlanEntryPointMetadata(
+                planMetadata.EntryPoint ?? string.Empty,
+                planMetadata.SourceRepository ?? string.Empty,
+                planMetadata.ReleaseTag ?? string.Empty,
+                composition,
+                planMetadata.Notes,
+                planMetadata.SchemaVersion);
+        }
+        catch (ArgumentException exception)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT430", $"Release '{releaseTag}' plan metadata is invalid: {exception.Message}"));
+            return null;
+        }
     }
 
     private static void ValidateProvenance(
@@ -506,7 +577,33 @@ public static class BundledCatalogLoader
 
         public string? AdapterManifestPath { get; init; }
 
+        public string? PlanMetadataPath { get; init; }
+
         public string? ProvenancePath { get; init; }
+    }
+
+    private sealed class PlanMetadataModel
+    {
+        public int SchemaVersion { get; init; }
+
+        public string? EntryPoint { get; init; }
+
+        public string? SourceRepository { get; init; }
+
+        public string? ReleaseTag { get; init; }
+
+        public PlanCompositionStepModel[]? Composition { get; init; }
+
+        public string[]? Notes { get; init; }
+    }
+
+    private sealed class PlanCompositionStepModel
+    {
+        public int Order { get; init; }
+
+        public string? SkillPath { get; init; }
+
+        public string? Purpose { get; init; }
     }
 
     private sealed class ProvenanceModel

@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MessagePack" Version="3.1.9" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" PrivateAssets="all" />
   </ItemGroup>
@@ -19,18 +20,10 @@
   <ItemGroup>
     <EmbeddedResource Include="SuperpowersToolWindowControl.xaml" />
     <Page Remove="SuperpowersToolWindowControl.xaml" />
-    <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*"
-             Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest"
-             IncludeInVSIX="true" />
-    <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj"
-                      ReferenceOutputAssembly="false"
-                      SkipGetTargetFrameworkProperties="true"
-                      GlobalPropertiesToRemove="TargetFramework"
-                      IncludeOutputGroupsInVSIX=""
-                      IncludeOutputGroupsInVSIXLocalOnly=""
-                      IncludeAssets="none"
-                      PrivateAssets="all" />
+    <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*" Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" IncludeInVSIX="true" />
+    <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" IncludeOutputGroupsInVSIX="" IncludeOutputGroupsInVSIXLocalOnly="" IncludeAssets="none" PrivateAssets="all" />
+    <ProjectReference Include="..\TheKameleon.Superpowers.Core\TheKameleon.Superpowers.Core.csproj" />
+    <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
   </ItemGroup>
   <Import Project="..\build\BridgeDebugDeployment.targets" />
   <Import Project="..\build\SuperpowersBuildVersion.targets" />

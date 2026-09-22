@@ -103,7 +103,7 @@ internal sealed class CapabilityProbeCommands
     {
         var componentModel = await package.GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
         await package.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-        var host = componentModel is null ? null : new BridgeHost(componentModel);
+        var host = componentModel is null ? null : new BridgeHost(package, componentModel);
         var summary = await ProbeEditorAsync(componentModel, host?.GetRoslynProbe(), package.DisposalToken,
             scope == "Document Compiler Diagnostics");
 

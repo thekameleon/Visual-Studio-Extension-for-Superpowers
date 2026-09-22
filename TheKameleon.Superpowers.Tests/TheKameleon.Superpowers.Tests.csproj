@@ -5,14 +5,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +34,9 @@
     <Compile Include="..\TheKameleon.Superpowers.InProcess\SemanticTargetResolver.cs" Link="Bridge\SemanticTargetResolver.cs" />
     <Compile Include="..\TheKameleon.Superpowers.InProcess\SelectionIdentity.cs" Link="Bridge\SelectionIdentity.cs" />
     <Compile Include="..\TheKameleon.Superpowers.InProcess\DocumentCompilerDiagnostics.cs" Link="Bridge\DocumentCompilerDiagnostics.cs" />
+    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\IBridgeClient.cs" Link="Vsix\Bridge\IBridgeClient.cs" />
+    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\UnavailableBridgeClient.cs" Link="Vsix\Bridge\UnavailableBridgeClient.cs" />
+    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\PipeBridgeClient.cs" Link="Vsix\Bridge\PipeBridgeClient.cs" />
   </ItemGroup>
 
 </Project>
