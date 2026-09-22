@@ -56,6 +56,19 @@ public sealed class CatalogReloadServiceTests
         Assert.Equal("Plan", result.State.SelectedSkillId);
     }
 
+    [Fact]
+    public void PreservesSelectedSkillAcrossCatalogUpgradeWhenStillAvailable()
+    {
+        var previous = new CatalogReloadState("Plan", Array.Empty<ActiveRunPin>());
+        var upgradedDiscovery = CreateDiscovery("Debug", "Plan", "Review");
+
+        var result = CatalogReloadService.Reload(upgradedDiscovery, previous);
+
+        Assert.False(result.HasErrors);
+        Assert.Equal("Plan", result.State.SelectedSkillId);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT302");
+    }
+
     private static DiscoveryResult CreateDiscovery(params string[] skillIds)
     {
         var skills = skillIds.Select((skillId, index) => new DiscoveredSkillEntry(

@@ -154,6 +154,60 @@ public sealed class ApprovedReleaseDiscoveryServiceTests
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT506");
     }
 
+    [Fact]
+    public async Task IncludesEveryPublishedEntryWhenPrereleasesAreEnabled()
+    {
+        using var client = CreateClient(_ => CreateJsonResponse("""
+        [
+          {
+            "tag_name": "v3.0.0-preview",
+            "name": "v3.0.0-preview",
+            "prerelease": true,
+            "published_at": "2026-09-21T00:00:00Z",
+            "html_url": "https://github.com/obra/superpowers/releases/tag/v3.0.0-preview",
+            "zipball_url": "https://api.github.com/repos/obra/superpowers/zipball/v3.0.0-preview"
+          },
+          {
+            "tag_name": "v2.5.0",
+            "name": "v2.5.0",
+            "prerelease": false,
+            "published_at": "2026-09-20T00:00:00Z",
+            "html_url": "https://github.com/obra/superpowers/releases/tag/v2.5.0",
+            "zipball_url": "https://api.github.com/repos/obra/superpowers/zipball/v2.5.0"
+          },
+          {
+            "tag_name": "v2.4.0",
+            "name": "v2.4.0",
+            "prerelease": false,
+            "published_at": "2026-09-19T00:00:00Z",
+            "html_url": "https://github.com/obra/superpowers/releases/tag/v2.4.0",
+            "zipball_url": "https://api.github.com/repos/obra/superpowers/zipball/v2.4.0"
+          }
+        ]
+        """));
+        var service = new ApprovedReleaseDiscoveryService(client);
+
+        var result = await service.DiscoverAsync(ReleaseChannelFilter.IncludePrerelease, CancellationToken.None);
+
+        Assert.False(result.HasErrors);
+        Assert.Equal(new[] { "v3.0.0-preview", "v2.5.0", "v2.4.0" }, result.Releases.Select(release => release.ReleaseTag).ToArray());
+    }
+
+    [Fact]
+    public async Task ReportsNonSuccessStatusAsError()
+    {
+        using var client = CreateClient(_ => new HttpResponseMessage(HttpStatusCode.BadGateway)
+        {
+            ReasonPhrase = "Bad Gateway"
+        });
+        var service = new ApprovedReleaseDiscoveryService(client);
+
+        var result = await service.DiscoverAsync(ReleaseChannelFilter.StableOnly, CancellationToken.None);
+
+        Assert.True(result.HasErrors);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT503");
+    }
+
     private static HttpClient CreateClient(Func<CancellationToken, HttpResponseMessage> responseFactory)
     {
         return CreateClient(cancellationToken => Task.FromResult(responseFactory(cancellationToken)));

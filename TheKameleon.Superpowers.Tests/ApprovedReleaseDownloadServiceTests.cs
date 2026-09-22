@@ -86,6 +86,51 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
         Assert.True(File.Exists(Path.Combine(existingTarget, "sentinel.txt")));
     }
 
+    [Fact]
+    public async Task RejectsMaliciousArchivePathTraversal()
+    {
+        var targetDirectory = Path.Combine(tempRoot, "active-catalog");
+        using var client = CreateClient(_ => CreateZipResponse(CreateArchiveWithTraversalPath()));
+        var service = new ApprovedReleaseDownloadService(client);
+
+        var result = await service.DownloadAndActivateAsync(CreateApprovedRelease(), targetDirectory, approvalGranted: true, CancellationToken.None);
+
+        Assert.True(result.HasErrors);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT606");
+        Assert.False(Directory.Exists(targetDirectory));
+    }
+
+    [Fact]
+    public async Task PropagatesCancelledDownload()
+    {
+        using var client = CreateClient(async cancellationToken =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var service = new ApprovedReleaseDownloadService(client);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.DownloadAndActivateAsync(CreateApprovedRelease(), Path.Combine(tempRoot, "active-catalog"), approvalGranted: true, cancellationTokenSource.Token));
+    }
+
+    [Fact]
+    public async Task RejectsIncompatibleDownloadedCatalog()
+    {
+        var targetDirectory = Path.Combine(tempRoot, "active-catalog");
+        using var client = CreateClient(_ => CreateZipResponse(CreateArchiveWithoutRequiredSkill()));
+        var service = new ApprovedReleaseDownloadService(client);
+
+        var result = await service.DownloadAndActivateAsync(CreateApprovedRelease(), targetDirectory, approvalGranted: true, CancellationToken.None);
+
+        Assert.True(result.HasErrors);
+        Assert.NotNull(result.Validation);
+        Assert.Contains(result.Validation.Releases.SelectMany(release => release.Diagnostics), diagnostic => diagnostic.Code == "SPCAT422");
+        Assert.False(Directory.Exists(targetDirectory));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempRoot))
@@ -119,6 +164,29 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
         return memory.ToArray();
     }
 
+    private static byte[] CreateArchiveWithTraversalPath()
+    {
+        using var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteEntry(archive, "../outside.txt", "nope");
+        }
+
+        return memory.ToArray();
+    }
+
+    private static byte[] CreateArchiveWithoutRequiredSkill()
+    {
+        using var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteEntry(archive, "release-root/LICENSE", "MIT License");
+            WriteEntry(archive, "release-root/skills/brainstorming/SKILL.md", "---\nname: brainstorming\ndescription: Plan\n---\nbody\n");
+        }
+
+        return memory.ToArray();
+    }
+
     private static byte[] CreateArchiveWithoutLicense()
     {
         using var memory = new MemoryStream();
@@ -140,7 +208,12 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
 
     private static HttpClient CreateClient(Func<CancellationToken, HttpResponseMessage> responseFactory)
     {
-        return new HttpClient(new StubHttpMessageHandler((_, cancellationToken) => Task.FromResult(responseFactory(cancellationToken))));
+        return CreateClient(cancellationToken => Task.FromResult(responseFactory(cancellationToken)));
+    }
+
+    private static HttpClient CreateClient(Func<CancellationToken, Task<HttpResponseMessage>> responseFactory)
+    {
+        return new HttpClient(new StubHttpMessageHandler((_, cancellationToken) => responseFactory(cancellationToken)));
     }
 
     private static HttpResponseMessage CreateZipResponse(byte[] bytes)
