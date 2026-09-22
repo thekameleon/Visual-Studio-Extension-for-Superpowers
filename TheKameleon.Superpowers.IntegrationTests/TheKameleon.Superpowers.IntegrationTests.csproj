@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
     <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj"
                       ReferenceOutputAssembly="false"
                       SkipGetTargetFrameworkProperties="true"

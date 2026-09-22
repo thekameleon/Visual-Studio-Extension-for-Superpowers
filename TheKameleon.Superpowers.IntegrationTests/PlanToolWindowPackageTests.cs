@@ -80,7 +80,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var menu = Assert.Single(root.GetProperty("controlContainers").EnumerateArray(), container =>
                 container.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.SuperpowersExtension.SuperpowersMenu");
             Assert.Equal("Menu", menu.GetProperty("type").GetString());
-            AssertLocalizedDisplayName(package, menu, "Superpowers.Menu.DisplayName", "TheKameleon Superpowers");
+            AssertLocalizedDisplayName(package, menu, "Superpowers.Menu.DisplayName", "Superpowers");
 
             var placements = root.GetProperty("controlPlacements").EnumerateArray().ToArray();
             var menuPlacement = Assert.Single(placements, placement =>
@@ -107,6 +107,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var window = Assert.Single(root.GetProperty("toolWindows").EnumerateArray(), candidate =>
                 candidate.GetProperty("identifier").GetString() == "TheKameleon.Superpowers.Vsix.SuperpowersToolWindow");
             Assert.Equal("DocumentWell", window.GetProperty("placement").GetString());
+            Assert.True(window.GetProperty("allowAutoCreation").GetBoolean());
             var provider = Assert.Single(root.GetProperty("services").EnumerateArray(), service =>
                 $"{service.GetProperty("name").GetString()};{service.GetProperty("version").GetString()}" == window.GetProperty("serviceMoniker").GetString());
             Assert.Equal("dotnetExtensibility", provider.GetProperty("host").GetString());

@@ -11,7 +11,7 @@ namespace TheKameleon.Superpowers.Vsix
     {
         internal static ProbeResultsViewModel ProbeResults { get; } = new();
 
-        private readonly SuperpowersToolWindowControl control = new(ProbeResults);
+        private SuperpowersToolWindowControl? control;
 
         public SuperpowersToolWindow()
         {
@@ -20,12 +20,14 @@ namespace TheKameleon.Superpowers.Vsix
 
         public override ToolWindowConfiguration ToolWindowConfiguration => new()
         {
+            AllowAutoCreation = true,
             Placement = ToolWindowPlacement.DocumentWell,
         };
 
         public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            this.control ??= new SuperpowersToolWindowControl(ProbeResults);
             return Task.FromResult<IRemoteUserControl>(this.control);
         }
 
@@ -33,7 +35,8 @@ namespace TheKameleon.Superpowers.Vsix
         {
             if (disposing)
             {
-                this.control.Dispose();
+                this.control?.Dispose();
+                this.control = null;
             }
 
             base.Dispose(disposing);

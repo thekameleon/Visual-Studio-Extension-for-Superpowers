@@ -11,6 +11,12 @@ namespace TheKameleon.Superpowers.Tests
         }
 
         [Fact]
+        public void BridgeCapabilityEnumIncludesExplicitTestExplorerGap()
+        {
+            Assert.Equal(4, (int)BridgeCapability.TestExplorer);
+        }
+
+        [Fact]
         public void BridgeContractsContainNoVisualStudioTypes()
         {
             var contractAssembly = typeof(BridgeProtocol).Assembly;

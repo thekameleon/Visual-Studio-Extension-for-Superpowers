@@ -156,8 +156,13 @@ settings disable bridge debug deployment and fail IDE Debug build validation.
 The build-only reference does not bundle bridge files in the modern VSIX or attach
 the debugger to devenv. The old preparation marker and hook-specific properties
 are obsolete. Earlier VS 2026 native deployment was user-confirmed. VS 2022
-stale-copy cleanup and the new version display require an F5 runtime retest;
-a successful build/configuration check is not runtime proof.
+stale-copy cleanup and the new version display required runtime verification. The
+subsequent VS 2022 frame-construction failure was ultimately cleared by deleting
+the experimental-instance profile folder
+`%LOCALAPPDATA%\Microsoft\VisualStudio\17.0_dcdb5f81Exp`, after which it could not
+be reproduced. Keep the supported lazy `GetContentAsync` content-creation pattern;
+use profile-folder deletion only for a corrupted Exp instance, not as the normal
+debug workflow. A successful build/configuration check is not runtime proof.
 
 ### Automatic build identity
 

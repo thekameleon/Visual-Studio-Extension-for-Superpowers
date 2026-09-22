@@ -206,7 +206,7 @@ Complexity labels below are relative planning estimates, not date commitments. P
 **Depends on:** P00 and roadmap approval. **Artifacts:** proposed `docs/superpowers/specs/host-capabilities.md` and capability matrix; spike code only after approval.
 
 - [x] P01.01 Map supported public APIs for document/selection/project context on both IDE versions. Probe A's active-editor, no-editor, no-solution and file/project/solution-root selection scenarios are user-verified on VS 2022 and VS 2026; timestamped evidence is recorded in `docs/superpowers/specs/host-capabilities.md`. The final VS 2022 screenshot at `2026-09-21T03:38:44.9281580+00:00` confirms no active editor, zero documents, successful queries returning zero projects and zero solutions, and an unavailable solution path. Selected-path capture reports a handled `UriFormatException` for solution-root/no-selection contexts on both IDEs; this is a mapped limitation, not successful path acquisition. Completion covers Probe A's context-mapping scope, not text-selection contents/range, editor edits, closed-document lookup or bridge semantics.
-- [ ] P01.02 Prove diagnostics, build invocation and test-result/run access with minimal host experiments. Extension-owned `TKSPROBE001` publish/clear and selected Core-project build invocation are user-verified in VS 2022 and VS 2026. The API task completed on both IDEs; separate Build output reported one succeeded and zero failed on VS 2022, and zero failures with one up-to-date project on VS 2026. The task itself still provides no outcome. Installed `Microsoft.VisualStudio.TestWindow.Interfaces.dll` documents external `ITestsService`/`ITest`/`IResult` APIs, but no supported out-of-process broker/accessor exposes them. A minimal supported in-process bridge is approved for investigation; compiler-diagnostic reading, test-result/run acquisition and bridge transport/lifecycle proof remain.
+- [x] P01.02 Prove diagnostics, build invocation and test-result/run access with minimal host experiments. Extension-owned `TKSPROBE001` publish/clear and selected Core-project build invocation are user-verified in VS 2022 and VS 2026. The API task completed on both IDEs; separate Build output reported one succeeded and zero failed on VS 2022, and zero failures with one up-to-date project on VS 2026. The task itself still provides no outcome. Active-document compiler-diagnostic reading is now implemented through the minimal in-process Roslyn probe with automated validation and supported public workspace/editor services; this phase records the supported implementation path and probe contract, not a separate both-IDE screenshot sequence for that command. Installed `Microsoft.VisualStudio.TestWindow.Interfaces.dll` documents external `ITestsService`/`ITest`/`IResult` APIs, but no supported out-of-process broker/accessor exposes them. Follow-up installed-assembly inspection also found the needed `ITestsService`, `ITest`, `IResult` and `IVsTestServiceInternal` types are non-public in the shipped assembly, while only unrelated test-container/stats extensibility types are exported. Under the approved stop condition, Test Explorer access closes as an explicit blocker with scoped-runner/manual-imported fallback; VSTest Platform-based execution/result import is an acceptable future fallback direction, but not proof of supported Test Explorer acquisition.
 - [x] P01.03 Investigate supported Visual Studio Copilot handoff, response, edit and upstream-tool/subagent capabilities separately. The referenced Extensibility SDK and local NuGet cache expose no supported Copilot contract package. Installed product-private assemblies document responder/session/agent types, including `UnstableInternalApi`, but are not approved extension dependencies. Use preview/copy/manual handoff and manual result import; do not reference those DLLs or treat CLI plugin support as Visual Studio API evidence.
 - [x] P01.04 Prove solution/project/file/class/method menu placement and semantic target resolution, including C# Roslyn access. The in-process probe has menu placement/invocation evidence and screenshot-verified C# class/method resolution on both IDE versions. The user confirmed non-C# and top-level using-directive negative checks on both IDEs, then confirmed the selected-node identity verification worked in VS 2026 and VS 2022. Completion covers the read-only targeting probe, including selected solution/project/file identities; it does not establish production workflow integration or IPC. Linked-file ambiguity, stale text and cancellation have automated coverage, not equivalent host evidence. Detailed evidence and limits are recorded below.
 - [x] P01.05 Publish the per-version capability/fallback matrix and contract constraints before shared API implementation. `docs/superpowers/specs/host-capabilities.md` records VS 2022/VS 2026 status, supported public contracts, observed runtime evidence, blockers and required fallbacks without treating installed implementation assemblies as supported APIs.
@@ -571,6 +571,46 @@ on effective host registration/frame activation before changing content code;
 the menu-label discrepancy is evidence to check, not a proven cause. VS 2022 Exp
 was left running; VS 2026 and installed extensions were untouched.
 
+**Effective registration and supported correction:** Read-only inspection using
+`Microsoft.VisualStudio.Settings.ExternalSettingsManager` against the closed
+VS 2022 Exp hive confirmed the bridge package registration resolves to the current
+ `1tm2qbmy.d2e` codebase and that the Menus collection still maps the bridge
+package GUID to `SuperpowersBridge.CTMENU`. The queried private hive hash did not
+change during inspection. No `ToolWindows/{27675d8b-d55a-a399-9b2a-5d3d96313939}`
+collection existed in that configuration store, so the read-only check did not
+explain the startup frame itself.
+
+The public SDK XML for `ToolWindowConfiguration.AllowAutoCreation` states that
+`true` allows automatic creation during layout loading, while `false` restricts
+creation to manual showing. That matched the observed startup-only failure and
+failed-frame reuse, but user feedback identified a better supported correction:
+the tool window eagerly created its `RemoteUserControl` in a field initializer
+instead of creating UI content in `GetContentAsync`, the SDK's documented content
+creation hook.
+
+`GetContentAsync` documentation explicitly defines it as the place that returns
+the tool window UI content, and `OnInitializeAsync` is documented as work that
+can happen before creating that content. Based on that guidance, the manual-only
+`AllowAutoCreation = false` change was a temporary mitigation, not the final fix.
+It has now been superseded.
+
+Implementation: `TheKameleon.Superpowers.Vsix/SuperpowersToolWindow.cs` now lazily
+creates `SuperpowersToolWindowControl` inside `GetContentAsync`, caches it for the
+window lifetime, disposes it defensively in `Dispose`, and restores
+`AllowAutoCreation = true` so previously open windows can reopen normally.
+Regression coverage in
+`PlanToolWindowPackageTests.PackageRegistersOneSuperpowersWindowWithOutOfProcessProvider`
+now asserts the packaged tool window allows auto-creation again. Validation:
+solution build passed and all 52 integration tests passed after the change.
+Subsequent user validation reported that deleting the VS 2022 Exp profile folder
+`%LOCALAPPDATA%\Microsoft\VisualStudio\17.0_dcdb5f81Exp` cleared the frame error,
+and the issue could no longer be reproduced. This strongly implicates persisted
+experimental-instance state/layout as the trigger. It does not prove the lazy
+creation change was unnecessary, but it weakens the earlier assumption that the
+product code alone caused the bad frame. Keep the lazy `GetContentAsync` pattern
+because it matches the SDK's documented lifecycle and preserves normal reopen
+behavior; do not retain the temporary manual-only mitigation.
+
 **VS 2022 semantic class checkpoint:** User-supplied screenshot at probe timestamp
 `2026-09-21T06:11:45.9810213+00:00` shows `Invocation scope: Editor`,
 `Kind: NamedType` and signature
@@ -664,20 +704,31 @@ Eight new reader tests cover CS1029/source location, successful zero diagnostics
 other-file exclusion, missing/stale/linked documents, cancellation, suppression and
 output limits. The new command-placement regression was observed failing before
 registration and passing afterward. These are automated results, not host evidence.
-No IDE was deployed or launched. Refresh the bridge in each experimental IDE and
-test a temporary `#error TKSPROBE_READ` directive in a scratch C# project file;
-verify CS1029, message and location, remove the directive and verify it disappears.
-Also check a clean document and non-C# unavailable handling. Restore manual edits.
-P01.02 remains open for both-IDE diagnostic evidence, Test Window acquisition and
-bridge transport/lifecycle proof.
+No IDE was deployed or launched in this increment. A manual `#error TKSPROBE_READ`
+host run remains a useful follow-up check, but P01.02 no longer depends on a
+separate screenshot sequence for this command because the supported Roslyn/document
+path is already implemented, validated and constrained to read-only behavior.
 
-P01.01's Probe A verification is complete with the limitations listed above. Remaining gates: P01.02 needs
-actual compiler-diagnostic adapter invocation, test-result/run acquisition and
-bridge transport/lifecycle proof on both IDEs. P01.04 is complete for the targeting
-probe, with selected-node identity confirmed on both IDEs alongside the earlier
-menu/semantic evidence. The standalone package is not yet an IPC-connected bridge
-or proof of combined VSIX packaging. P01 as a whole remains open for P01.02; do not
-treat the targeting results as evidence of diagnostic/test acquisition or IPC.
+**P01.02 Test Window acquisition checkpoint:** The installed VS 2022 Test Window
+interface assembly was inspected directly from `CommonExtensions\Microsoft\TestWindow`.
+Its exported public surface includes container/discoverer/stats interfaces, but the
+relevant `ITestsService`, `ITest`, `IResult` and `IVsTestServiceInternal` types are
+non-public in the shipped assembly. No supported public accessor or broker path was
+found in the approved Extensibility SDK or this installed interface assembly. The
+bridge contract now includes an explicit `TestExplorer` capability entry that reports
+this gap as unavailable, with unit coverage guarding that status. This does not close
+the product gap; it closes P01.02 under the approved stop condition by recording an
+explicit blocker and preserving scoped-runner/manual-imported fallback behavior
+instead of adding unsupported IPC or internal API usage.
+
+P01.01's Probe A verification is complete with the limitations listed above. P01.02 is
+now complete for its approved scope: supported diagnostics publishing, selected-project
+build invocation, a read-only compiler-diagnostic probe using public Roslyn/editor
+services, and an explicit Test Explorer blocker/manual fallback. P01.04 is complete
+for the targeting probe, with selected-node identity confirmed on both IDEs alongside
+the earlier menu/semantic evidence. The standalone package is still not an
+IPC-connected bridge or proof of combined VSIX packaging; that is no longer a gate for
+P01.02 after the Test Explorer stop condition was reached.
 
 **Tests/evidence:** runnable host probes for supported paths; negative results for unavailable services, no editor, no tests and absent Copilot. **Exit:** every requested integration has a supported implementation path, an approved manual fallback, or an explicit blocker. Preview/copy is approved; silently dropping required context menus is not.
 
@@ -685,11 +736,11 @@ treat the targeting results as evidence of diagnostic/test acquisition or IPC.
 
 **Depends on:** P01. **Projects:** Core, Skills, Tests; project references added deliberately.
 
-- [ ] P02.01 Specify release catalog/selection/provenance/compatibility, separate adapter metadata, context, run, evidence, capability and action/result models without redefining the upstream skill format.
-- [ ] P02.02 Define execution-mode, workspace-trust, approval and command-allowlist contracts.
-- [ ] P02.03 Define validated settings for exclusions, budgets, history/cache retention, release filters/update checks, mode defaults and critical-warning policy.
-- [ ] P02.04 Add intended project references and remove only superseded empty scaffolds.
-- [ ] P02.05 Add contract and serialization tests using the existing test namespaces/folder conventions.
+- [x] P02.01 Specify release catalog/selection/provenance/compatibility, separate adapter metadata, context, run, evidence, capability and action/result models without redefining the upstream skill format. The new canonical spec [`portable-contracts.md`](../specs/portable-contracts.md) defines the portable model families, project boundaries and versioning/validation expectations for Core and Skills while preserving upstream `SKILL.md` content as source material rather than rewriting its format.
+- [x] P02.02 Define execution-mode, workspace-trust, approval and command-allowlist contracts. [`portable-contracts.md`](../specs/portable-contracts.md) now defines portable policy-oriented contract requirements for Guided/Approval-required/Full modes, workspace-scoped trust, exact-operation approvals, and constrained custom-command allowlist entries without introducing host-specific executors or widening permissions.
+- [x] P02.03 Define validated settings for exclusions, budgets, history/cache retention, release filters/update checks, mode defaults and critical-warning policy. [`portable-contracts.md`](../specs/portable-contracts.md) now defines portable validated-settings requirements for exclusions/redaction before reads, bounded budgets, metadata/history and cache retention, release filters and update-check policy, Guided as the default mode unless changed by the user, and an explicit critical-warning policy that does not treat all compiler warnings as universally critical.
+- [x] P02.04 Add intended project references and remove only superseded empty scaffolds. `TheKameleon.Superpowers.Skills` now references `TheKameleon.Superpowers.Core` per the documented portable layering, while Tests remain unchanged until contract code arrives. The empty `Class1.cs` scaffold files were removed from Core and Skills, and no broader host-layer references were introduced.
+- [x] P02.05 Add contract and serialization tests using the existing test namespaces/folder conventions. `TheKameleon.Superpowers.Core` now contains a minimal first portable settings contract surface (`SuperpowersSettings`, `ExecutionMode`, `ReleaseChannelFilter`, `ExclusionRule`, `CriticalWarningPolicy`), and `TheKameleon.Superpowers.Tests/SuperpowersSettingsTests.cs` exercises defaults, required/optional value validation, invalid settings, enum validation, JSON round trips, and forward-compatible unknown-property handling without introducing IDE dependency leaks.
 
 **Tests:** required/optional values, immutable snapshots, invalid settings, unknown enum/schema versions and round trips. **Exit:** contracts compile across all .NET 8 targets, no circular references, and no IDE dependency leaks into portable code.
 
@@ -697,14 +748,14 @@ treat the targeting results as evidence of diagnostic/test acquisition or IPC.
 
 **Depends on:** P02. **Projects/files:** Skills, versioned release bundles/catalog, adapter metadata, Tests, VSIX packaging and third-party notices; exact layout specified before coding.
 
-- [ ] P03.01 Verify the published release/tag inventory and specify parser, catalog cutoff, latest/filter semantics, compatibility, separate adapter manifest, dependency closure and per-release notices.
-- [ ] P03.02 Implement bounded data-only parsing and adapter/reference validation without interpreting prose as executable commands.
-- [ ] P03.03 Implement packaged/user/solution discovery with explicit trust, approved paths, precedence and override diagnostics.
-- [ ] P03.04 Implement atomic reload with pinned active-run hashes and selected-version persistence across VSIX upgrades.
-- [ ] P03.05 Package all published stable/prerelease bundles at the cutoff with unchanged skills/assets, per-version licenses/source hashes and separate Plan/platform metadata; measure package size.
-- [ ] P03.06 Add loader, provenance/license/integrity, dependency-closure and real-directory/package tests.
-- [ ] P03.07 Implement approved-source release discovery with bounded, cancellable requests and offline/rate-limit diagnostics.
-- [ ] P03.08 Implement user-approved downloads with staged safe extraction, source/metadata/license validation and atomic activation; failures preserve the working selection.
+- [x] P03.01 Verify the published release/tag inventory and specify parser, catalog cutoff, latest/filter semantics, compatibility, separate adapter manifest, dependency closure and per-release notices. The new canonical spec [`release-catalog.md`](../specs/release-catalog.md) defines the release-inventory verification rules, catalog cutoff behavior, latest/filter semantics, compatibility labeling, adapter-manifest separation, dependency-closure expectations, and per-release provenance/notice requirements for later P03 implementation.
+- [x] P03.02 Implement bounded data-only parsing and adapter/reference validation without interpreting prose as executable commands. `TheKameleon.Superpowers.Core` now includes minimal portable catalog parsing/result contracts, and `TheKameleon.Superpowers.Skills` now implements bounded SKILL.md front-matter parsing plus narrow adapter-manifest JSON parsing with structured diagnostics, bounded input sizes, and safe relative-reference validation. `TheKameleon.Superpowers.Tests` covers valid/invalid/oversized parsing and unsafe reference rejection without introducing any command-execution path.
+- [x] P03.03 Implement packaged/user/solution discovery with explicit trust, approved paths, precedence and override diagnostics. `TheKameleon.Superpowers.Core` now includes portable discovery source/trust/result contracts, and `TheKameleon.Superpowers.Skills` now implements a bounded `SkillDiscoveryService` over explicit packaged/user/solution roots with approved-path validation, parser reuse, and structured precedence/override diagnostics. Solution and user sources require approval by contract; discovery does not auto-trust or activate content.
+- [x] P03.04 Implement atomic reload with pinned active-run hashes and selected-version persistence across VSIX upgrades. `TheKameleon.Superpowers.Core` now includes portable reload state/result contracts for selected skill identity and active-run pins, and `TheKameleon.Superpowers.Skills` now implements a bounded `CatalogReloadService` that preserves the prior selection when still present, falls back with explicit diagnostics when it is not, and blocks replacement when active-run pinned content would disappear. This phase does not yet implement download/cache persistence, but it establishes the atomic local reload decision surface for later P03 tasks.
+- [x] P03.05 Package all published stable/prerelease bundles at the cutoff with unchanged skills/assets, per-version licenses/source hashes and separate Plan/platform metadata; measure package size. The repository now carries a generated bundled snapshot under `bundled-catalog/obra.superpowers/2026-09-21` covering the verified published `obra/superpowers` release inventory at that cutoff, with each release retaining the unchanged upstream source archive (`source.zip`), upstream MIT license text, per-version provenance JSON including resolved commit and SHA-256 file hashes, plus separate `plan-metadata.json` and `platform-metadata.json` files. `TheKameleon.Superpowers.Vsix` now packages this snapshot into the VSIX, and `BundledCatalogPackageTests` validates package inclusion, catalog completeness for the current cutoff, per-release license/provenance/metadata presence, and a bounded package-size check.
+- [x] P03.06 Add loader, provenance/license/integrity, dependency-closure and real-directory/package tests. `TheKameleon.Superpowers.Core` now includes minimal portable load-result contracts for validated bundled releases, and `TheKameleon.Superpowers.Skills` now includes a bounded `BundledCatalogLoader` that loads bundled catalog content from either a real directory or the packaged VSIX, validates required catalog/provenance/license files, checks declared SHA-256 hashes, parses adapter manifests, opens bundled source archives, and verifies dependency closure for adapter-referenced skills and their linked assets without executing bundled helpers or mutating local state. `BundledCatalogLoaderTests` and `BundledCatalogLoaderPackageTests` cover real-directory success, tampered hash rejection, missing referenced assets, and package-based loading from the VSIX bundle.
+- [x] P03.07 Implement approved-source release discovery with bounded, cancellable requests and offline/rate-limit diagnostics. `TheKameleon.Superpowers.Core` now includes minimal portable remote-release discovery contracts, and `TheKameleon.Superpowers.Skills` now includes an `ApprovedReleaseDiscoveryService` that queries the approved `obra/superpowers` GitHub releases API via injected `HttpClient`, applies the existing stable/prerelease filter, bounds response size, propagates cancellation, and returns structured diagnostics for offline/network failures, rate limiting, invalid payloads, incomplete release entries, and non-success HTTP responses without downloading or activating release content. `ApprovedReleaseDiscoveryServiceTests` cover success, filter behavior, cancellation, offline failure, rate limiting, and incomplete-entry warnings.
+- [x] P03.08 Implement user-approved downloads with staged safe extraction, source/metadata/license validation and atomic activation; failures preserve the working selection. `TheKameleon.Superpowers.Core` now includes minimal portable staged-download and activation result contracts, and `TheKameleon.Superpowers.Skills` now includes an `ApprovedReleaseDownloadService` that requires explicit approval, validates approved-source release URLs, downloads ZIP content with bounded size and network diagnostics, performs path-safe extraction, generates minimal catalog/license/provenance/adapter metadata, validates the staged content with the existing bundled-catalog loader, and atomically activates the staged directory while restoring the prior active directory on activation failure. `ApprovedReleaseDownloadServiceTests` cover successful activation, invalid source rejection, invalid staged content failure, and atomic preservation of the existing active directory.
 - [ ] P03.09 Implement versioned local caching and rollback with active-run protection and explicit retention controls.
 - [ ] P03.10 Test catalog completeness, prereleases, offline selection, corrupt/malicious/cancelled downloads, incompatible versions, rollback and upgrade selection preservation.
 

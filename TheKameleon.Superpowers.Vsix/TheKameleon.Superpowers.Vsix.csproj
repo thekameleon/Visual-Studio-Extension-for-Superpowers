@@ -19,6 +19,10 @@
   <ItemGroup>
     <EmbeddedResource Include="SuperpowersToolWindowControl.xaml" />
     <Page Remove="SuperpowersToolWindowControl.xaml" />
+    <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*"
+             Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             IncludeInVSIX="true" />
     <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj"
                       ReferenceOutputAssembly="false"
                       SkipGetTargetFrameworkProperties="true"

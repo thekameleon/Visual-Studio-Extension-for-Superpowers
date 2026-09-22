@@ -17,13 +17,21 @@ public static class BridgeCapabilityCatalog
                 BridgeCapability.SemanticTarget,
                 hasRoslynWorkspace,
                 "Roslyn VisualStudioWorkspace semantic model."),
-            Available(BridgeCapability.ContextMenuPlacement, "Public VSSDK command-table context menu identifiers.")
+            Available(BridgeCapability.ContextMenuPlacement, "Public VSSDK command-table context menu identifiers."),
+            Unavailable(
+                BridgeCapability.TestExplorer,
+                "Installed Test Window service/result interfaces are not publicly acquirable through a supported extension contract in the current IDE surface.")
         };
     }
 
     private static BridgeCapabilityResult Available(BridgeCapability capability, string detail)
     {
         return Result(capability, true, detail);
+    }
+
+    private static BridgeCapabilityResult Unavailable(BridgeCapability capability, string detail)
+    {
+        return Result(capability, false, detail);
     }
 
     private static BridgeCapabilityResult Result(
@@ -36,7 +44,7 @@ public static class BridgeCapabilityCatalog
             ProtocolVersion = BridgeProtocol.CurrentVersion,
             Capability = capability,
             IsAvailable = isAvailable,
-            Detail = isAvailable ? detail : "Required host service is unavailable."
+            Detail = detail
         };
     }
 }

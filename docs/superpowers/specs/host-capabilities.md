@@ -92,9 +92,9 @@ Primary inspected metadata:
 | Text-document snapshot/edit support | `DocumentExtensions.AsTextDocumentAsync`, `EditorExtensibility.EditAsync` | Public evidence only | Public evidence only | Public API exists; host probe still required | Probe document snapshot/version/edit rejection behavior |
 | Workspace/project queries | `WorkspacesExtensibility.QueryProjectsAsync`, `QueryProjectByPathAsync`, `QuerySolutionAsync` | Seven projects, one solution and canonical path when loaded; zero projects/solutions and unavailable path when closed | Observed with no solution and a 19-project solution; solution identity returned | Probe A loaded/no-solution queries verified on both IDEs | Preserve explicit empty-workspace handling; not proof of every query shape |
 | Extension-owned diagnostics reporting | `LanguagesExtensibility` + `DiagnosticsExtensionMethods.GetDiagnosticsReporter` + `DiagnosticsReporter.ReportDiagnosticAsync/ClearDiagnosticsAsync` | Publish and clear calls succeeded; Error List publication and removal user-confirmed | `TKSPROBE001` publish and clear observed in Error List | Publish/clear user-verified on both IDEs | Keep reporter alive while diagnostics are active; not evidence for reading compiler/build diagnostics |
-| Reading host compiler diagnostics | No inspected out-of-process API retrieves Error List/compiler diagnostics; Shell Error List provider types are in-process and provider-oriented rather than proven readers | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove a supported public in-process read contract and expose snapshots as DTOs, otherwise retain manual/imported evidence |
+| Reading host compiler diagnostics | No inspected out-of-process API retrieves Error List/compiler diagnostics; Shell Error List provider types are in-process and provider-oriented rather than proven readers. The in-process probe now implements read-only active-document compiler diagnostics through public Roslyn workspace/editor services rather than Error List readers. | Supported read-only probe implemented; no separate screenshot evidence recorded for this command | Supported read-only probe implemented; no separate screenshot evidence recorded for this command | Supported minimal bridge path established for active-document compiler diagnostics only | Reuse the current DTO/probe shape; do not describe it as an Error List snapshot or build outcome |
 | Build invocation/results | `Microsoft.VisualStudio.ProjectSystem.Query` 17.14.145 exposes `UpdateExtensions.BuildAsync` for project snapshots and solution queries | Selected Core-project invocation completed; separate Build output reported 1 succeeded, 0 failed | Selected Core-project invocation observed; task completed and independent Build output reported 0 failures | Selected-project invocation user-verified on both IDEs; API itself returns no build outcome | Collect outcome separately and never equate task completion with build success; solution-wide invocation not proven by this probe |
-| Test discovery/run/results | Installed `Microsoft.VisualStudio.TestWindow.Interfaces.dll` documents external-facing `ITestsService`, `ITest` and `IResult`, but no out-of-process broker/accessor is exposed by the referenced Extensibility SDK; `IVsTestServiceInternal` explicitly targets internal extensions | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove supported in-process acquisition and event lifetimes without using internal interfaces; otherwise use scoped runners or manual/imported evidence |
+| Test discovery/run/results | Installed `Microsoft.VisualStudio.TestWindow.Interfaces.dll` documents external-facing `ITestsService`, `ITest` and `IResult`, but no out-of-process broker/accessor is exposed by the referenced Extensibility SDK; `IVsTestServiceInternal` explicitly targets internal extensions. Direct installed-assembly inspection further shows `ITestsService`, `ITest`, `IResult` and `IVsTestServiceInternal` are non-public in the shipped interface assembly, while only unrelated public test-container/stats extensibility types are exported. | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation remains blocked on public acquisition | Prove supported in-process acquisition and event lifetimes without using internal or non-public interfaces; otherwise use scoped runners, VSTest Platform-based execution/result import, or manual/imported evidence |
 | Class/method semantic targeting | The out-of-process SDK documents no semantic model, symbol, syntax-tree or compilation contract | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove supported public in-process Roslyn workspace/document mapping and return immutable symbol DTOs; do not load IDE-local implementation DLLs directly |
 | Solution/project/file context-menu placement | Out-of-process `CommandPlacement.KnownPlacements` documents only Tools, View Other Windows and Extensions menus | No proven bridge path | No proven bridge path | Out-of-process gap; bridge investigation approved | Prove supported public VSSDK command placement on both IDEs; retain the Extensions submenu until verified |
 | Shell prompts/choices | XML docs show shell prompt/selection APIs | Public evidence only | Public evidence only | Likely available | Use for user approvals/settings when needed after probe |
@@ -296,14 +296,18 @@ The installed `Microsoft.VisualStudio.TestWindow.Interfaces.dll` refines the Tes
 Explorer finding. Its `Microsoft.VisualStudio.TestWindow.Extensibility` namespace
 documents `ITestsService`, `ITest`, `IResult` and run methods, while
 `IVsTestServiceInternal` explicitly states that it supports internal extensions without
-exposing too much externally. No separate `Microsoft.VisualStudio.TestWindow.Extensibility.dll`
-is installed, no Test Window contract package is resolved or present in the local NuGet
-cache, and the referenced out-of-process Extensibility SDK exposes no accessor or broker
-`Microsoft.VisualStudio.Shell.15.0` is a traditional in-process path. The approved
-hybrid architecture now permits a minimal bridge investigation, but the presence of
-this assembly is not proof that `ITestsService` can be acquired by a supported public
-extension contract. A probe must establish acquisition, event lifetime and compatibility
-without using `IVsTestServiceInternal` before the product can depend on this path.
+exposing too much externally. Direct inspection of the shipped assembly shows that
+`ITestsService`, `ITest`, `IResult` and `IVsTestServiceInternal` are not exported as
+public types, whereas public exports in this area are limited to unrelated container,
+discoverer, run-settings, stack-trace and stats interfaces. No separate
+`Microsoft.VisualStudio.TestWindow.Extensibility.dll` is installed, no Test Window
+contract package is resolved or present in the local NuGet cache, and the referenced
+out-of-process Extensibility SDK exposes no accessor or broker. `Microsoft.VisualStudio.Shell.15.0`
+is a traditional in-process path. The approved hybrid architecture now permits a minimal
+bridge investigation, but the presence of this assembly is not proof that `ITestsService`
+can be acquired by a supported public extension contract. A probe must establish
+acquisition, event lifetime and compatibility without using internal or non-public
+interfaces before the product can depend on this path.
 
 ## Approved hybrid boundary
 
