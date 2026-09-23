@@ -123,4 +123,33 @@ public sealed class ContextPrivacyServiceTests
         Assert.Equal(ContextValueState.Unavailable, document.Content!.State);
         Assert.Contains("unavailable", document.Content.Detail!, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void ApplyRedactsSensitiveContentAndExcludesFilesInCompilerDiagnostics()
+    {
+        var provenance = new ContextProvenance("test", DateTimeOffset.UtcNow);
+        var snapshot = new ContextCaptureSnapshot(
+            provenance,
+            new SolutionContextSnapshot(ContextValueState.Available, provenance, "Solution", "C:/repo/TheKameleon.Superpowers.slnx"),
+            compilerDiagnostics: new CompilerDiagnosticsContextSnapshot(
+                ContextValueState.Available,
+                provenance,
+                2,
+                new[]
+                {
+                    new CompilerDiagnosticContextItem("CS1000", "Error", "token=abcdef is invalid", "C:/repo/File.cs", 1, 2),
+                    new CompilerDiagnosticContextItem("CS1001", "Warning", "unused variable", "C:/repo/secrets.env", 3, 4),
+                }),
+            diagnostics: Array.Empty<ContextCaptureDiagnostic>());
+
+        var settings = new SuperpowersSettings(exclusions: new[] { new ExclusionRule(".env") });
+
+        var result = ContextPrivacyService.Apply(snapshot, settings);
+
+        var diagnosticsResult = result.Snapshot.CompilerDiagnostics!.Diagnostics;
+        Assert.Single(diagnosticsResult);
+        Assert.DoesNotContain("abcdef", diagnosticsResult[0].Message);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCTX602");
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCTX604");
+    }
 }

@@ -213,13 +213,17 @@ For a direct IDE menu command, add **Tools > External Tools > Add**:
 - Enable **Use Output window**; create a second entry using `2022` if needed.
 
 The script uses the selected IDE's MSBuild and the public VSSDK deployment target,
-which refreshes the existing extension deployment by identity. No manual version
-bump or uninstall is part of this workflow. It refuses a running target Exp process
-or ambiguous target and stops on build/deployment failure. It does not terminate
-processes, delete caches, elevate, launch an IDE, or install into the normal profile.
-Ordinary builds and tests default to no bridge deployment. Use this preparation
-only when the normal native F5 deployment fails, not before every F5. A loaded
-net472 bridge requires closing/relaunching Exp to use new binaries.
+which refreshes the existing extension deployment by identity. After a successful
+build/deployment, it also runs that same IDE's `devenv /RootSuffix Exp
+/UpdateConfiguration` so the Exp extension cache is refreshed to the newly deployed
+folder in the same run; no separate manual `/UpdateConfiguration` step is required
+afterward. No manual version bump or uninstall is part of this workflow. It refuses
+a running target Exp process or ambiguous target and stops on build/deployment
+failure. It does not terminate processes, delete caches, elevate, launch an IDE, or
+install into the normal profile. Ordinary builds and tests default to no bridge
+deployment. Use this preparation only when the normal native F5 deployment fails,
+not before every F5. A loaded net472 bridge requires closing/relaunching Exp to use
+new binaries.
 
 The manual command remains available independently of the deployment hook. Debugger
 attachment to in-process bridge code is separate from the modern extension debugger.

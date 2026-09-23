@@ -11,6 +11,7 @@ namespace TheKameleon.Superpowers.Vsix
     {
         internal static ProbeResultsViewModel ProbeResults { get; } = new();
 
+        private SuperpowersWorkflowViewModel? workflow;
         private SuperpowersToolWindowControl? control;
 
         public SuperpowersToolWindow()
@@ -24,11 +25,17 @@ namespace TheKameleon.Superpowers.Vsix
             Placement = ToolWindowPlacement.DocumentWell,
         };
 
-        public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
+        public override async Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            this.control ??= new SuperpowersToolWindowControl(ProbeResults);
-            return Task.FromResult<IRemoteUserControl>(this.control);
+            if (this.control is null)
+            {
+                this.workflow = new SuperpowersWorkflowViewModel(this.Extensibility);
+                this.control = new SuperpowersToolWindowControl(this.workflow);
+                await this.workflow.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return this.control;
         }
 
         protected override void Dispose(bool disposing)
@@ -37,6 +44,8 @@ namespace TheKameleon.Superpowers.Vsix
             {
                 this.control?.Dispose();
                 this.control = null;
+                this.workflow?.Dispose();
+                this.workflow = null;
             }
 
             base.Dispose(disposing);

@@ -42,4 +42,48 @@ public sealed class BridgeHost
     {
         return DocumentTextProbe.CaptureActiveDocumentAsync(package, componentModel, cancellationToken);
     }
+
+    public async System.Threading.Tasks.Task<SemanticTargetInfo?> GetSemanticTargetAsync(
+        string filePath,
+        string documentText,
+        int position,
+        System.Threading.CancellationToken cancellationToken)
+    {
+        var probe = GetRoslynProbe();
+        if (probe is null)
+        {
+            return null;
+        }
+
+        return await probe.GetSemanticTargetAsync(
+            filePath,
+            Microsoft.CodeAnalysis.Text.SourceText.From(documentText),
+            position,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async System.Threading.Tasks.Task<DocumentCompilerDiagnosticsInfo?> GetCompilerDiagnosticsAsync(
+        string filePath,
+        string documentText,
+        System.Threading.CancellationToken cancellationToken)
+    {
+        var probe = GetRoslynProbe();
+        if (probe is null)
+        {
+            return null;
+        }
+
+        var result = await probe.GetDocumentCompilerDiagnosticsAsync(
+            filePath,
+            Microsoft.CodeAnalysis.Text.SourceText.From(documentText),
+            cancellationToken).ConfigureAwait(false);
+
+        return result is null
+            ? null
+            : new DocumentCompilerDiagnosticsInfo
+            {
+                TotalCount = result.TotalCount,
+                Diagnostics = result.Diagnostics
+            };
+    }
 }

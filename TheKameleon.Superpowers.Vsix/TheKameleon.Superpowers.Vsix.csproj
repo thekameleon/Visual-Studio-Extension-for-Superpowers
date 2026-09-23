@@ -9,6 +9,7 @@
     <LangVersion>12</LangVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
     <IsPackable>false</IsPackable>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>

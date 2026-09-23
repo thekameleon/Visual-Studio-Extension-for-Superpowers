@@ -14,6 +14,7 @@
 - Current priority is to prove a supported VSIX-to-in-process transport so the active-document text blocker can be removed.
 - User approved end-to-end implementation across P04.04 through P05 and wants work to continue without routine interruptions, stopping only for a required product decision, an unresolved build/test blocker, or a codebase mismatch that invalidates the plan.
 - For P05.01 and similar context capture work, use out-of-process APIs for document presence, URI, and selection, and use the approved minimal in-process bridge for document text. Deliver active-document capture as the document scope; open-document collection can remain presence/URI-focused unless safe bridge-backed multi-document text capture is added later.
+- F5/native debug deployment for TheKameleon.Superpowers.InProcess (in-process bridge) now automatically refreshes the Exp instance's extension cache via a RefreshExpExtensionCache MSBuild target (touches Extensions\\extensions.configurationchanged after DeployVsixExtensionFiles) in build/BridgeDebugDeployment.targets. This fixed stale pkgdef path load failures on both VS2022 and VS2026 Exp instances. Confirmed working end-to-end by the user on both IDE versions.
 
 ## User Interaction Guidelines
 - Stop and acknowledge when stuck instead of repeatedly retrying the same failing edit path.

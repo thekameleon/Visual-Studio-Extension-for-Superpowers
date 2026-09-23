@@ -37,6 +37,8 @@
     <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\IBridgeClient.cs" Link="Vsix\Bridge\IBridgeClient.cs" />
     <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\UnavailableBridgeClient.cs" Link="Vsix\Bridge\UnavailableBridgeClient.cs" />
     <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\PipeBridgeClient.cs" Link="Vsix\Bridge\PipeBridgeClient.cs" />
+    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\ICopilotBridge.cs" Link="Vsix\Bridge\ICopilotBridge.cs" />
+    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\UnsupportedCopilotBridge.cs" Link="Vsix\Bridge\UnsupportedCopilotBridge.cs" />
   </ItemGroup>
 
 </Project>

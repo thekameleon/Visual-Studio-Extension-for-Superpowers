@@ -116,41 +116,77 @@ namespace TheKameleon.Superpowers.IntegrationTests
         }
 
         [Fact]
-        public void PackageEmbedsRemoteViewWithProbeResultBindings()
+        public void PackageEmbedsRemoteViewWithWorkflowBindings()
         {
-            using var package = OpenPackage();
-            using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
-            using var assembly = new MemoryStream();
-            assemblyStream.CopyTo(assembly);
-            assembly.Position = 0;
-            using var peReader = new PEReader(assembly);
-            var metadata = peReader.GetMetadataReader();
-            var resource = Assert.Single(metadata.ManifestResources.Select(metadata.GetManifestResource), candidate =>
-                metadata.GetString(candidate.Name) == "TheKameleon.Superpowers.Vsix.SuperpowersToolWindowControl.xaml");
-
-            Assert.True(resource.Implementation.IsNil, "Remote UI XAML must be embedded, not externally linked.");
-            var header = peReader.PEHeaders.CorHeader;
-            Assert.NotNull(header);
-            var reader = peReader.GetSectionData(header.ResourcesDirectory.RelativeVirtualAddress).GetReader();
-            reader.Offset = checked((int)resource.Offset);
-            var length = reader.ReadInt32();
-            Assert.InRange(length, 1, reader.RemainingBytes);
-            using var xamlStream = new MemoryStream(reader.ReadBytes(length));
-            var view = XDocument.Load(xamlStream);
+            var view = LoadEmbeddedToolWindowXaml();
             XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
             Assert.Equal(presentation + "DataTemplate", view.Root!.Name);
             var textValues = view.Descendants(presentation + "TextBlock")
                 .Select(element => (string?)element.Attribute("Text"))
                 .ToArray();
-            Assert.Contains("Superpowers capability probes", textValues);
-            Assert.Contains("{Binding Status}", textValues);
-            Assert.Contains("{Binding Details}", textValues);
-            Assert.Contains("{Binding Notes}", textValues);
+            Assert.Contains("Superpowers Plan workflow", textValues);
+            Assert.Contains("{Binding StatusText}", textValues);
+            Assert.Contains("{Binding RunStateText}", textValues);
+
+            var buttonCommands = view.Descendants(presentation + "Button")
+                .Select(element => (string?)element.Attribute("Command"))
+                .ToArray();
+            Assert.Contains("{Binding StartCommand}", buttonCommands);
+            Assert.Contains("{Binding NextCommand}", buttonCommands);
+            Assert.Contains("{Binding PauseCommand}", buttonCommands);
+            Assert.Contains("{Binding CancelCommand}", buttonCommands);
+            Assert.Contains("{Binding CopyPromptCommand}", buttonCommands);
+            Assert.Contains("{Binding RefreshHistoryCommand}", buttonCommands);
+            Assert.Contains("{Binding ExportHistoryCommand}", buttonCommands);
+            Assert.Contains("{Binding DeleteHistoryCommand}", buttonCommands);
+            Assert.Contains("{Binding AcceptDesignCommand}", buttonCommands);
         }
 
         [Fact]
-        public void ProbeResultModelDeclaresRemoteUiSerializationAttributes()
+        public void PackageEmbedsHistorySearchAndPlanCompositionControlsWithAccessibleNames()
+        {
+            var view = LoadEmbeddedToolWindowXaml();
+            XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+
+            var textBoxes = view.Descendants(presentation + "TextBox").ToArray();
+            var historySearchBox = Assert.Single(textBoxes, element =>
+                (string?)element.Attribute("Text") == "{Binding HistorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}");
+            Assert.False(string.IsNullOrWhiteSpace((string?)historySearchBox.Attribute("AutomationProperties.Name")),
+                "The history search box must expose an accessible name for screen readers.");
+
+            foreach (var buttonCommand in new[]
+            {
+                "{Binding RefreshHistoryCommand}",
+                "{Binding ExportHistoryCommand}",
+                "{Binding DeleteHistoryCommand}",
+                "{Binding AcceptDesignCommand}",
+            })
+            {
+                var button = Assert.Single(view.Descendants(presentation + "Button"), element =>
+                    (string?)element.Attribute("Command") == buttonCommand);
+                Assert.False(string.IsNullOrWhiteSpace((string?)button.Attribute("AutomationProperties.Name")),
+                    $"Button bound to '{buttonCommand}' must expose an accessible name for screen readers.");
+            }
+
+            var textValues = view.Descendants(presentation + "TextBlock")
+                .Select(element => (string?)element.Attribute("Text"))
+                .ToArray();
+            Assert.Contains("{Binding HandoffStatusText}", textValues);
+
+            var composedStepsList = Assert.Single(view.Descendants(presentation + "ItemsControl"), element =>
+                (string?)element.Attribute("ItemsSource") == "{Binding ComposedSteps}");
+            Assert.NotNull(composedStepsList);
+            var acceptedTasksList = Assert.Single(view.Descendants(presentation + "ItemsControl"), element =>
+                (string?)element.Attribute("ItemsSource") == "{Binding AcceptedTasks}");
+            Assert.NotNull(acceptedTasksList);
+            var historyList = Assert.Single(view.Descendants(presentation + "ItemsControl"), element =>
+                (string?)element.Attribute("ItemsSource") == "{Binding HistoryEntries}");
+            Assert.NotNull(historyList);
+        }
+
+        [Fact]
+        public void WorkflowViewModelDeclaresRemoteUiSerializationAttributes()
         {
             using var package = OpenPackage();
             using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
@@ -161,12 +197,12 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var metadata = peReader.GetMetadataReader();
             var type = Assert.Single(metadata.TypeDefinitions
                 .Select(metadata.GetTypeDefinition), candidate =>
-                    metadata.GetString(candidate.Name) == "ProbeResultsViewModel");
+                    metadata.GetString(candidate.Name) == "SuperpowersWorkflowViewModel");
 
             Assert.Contains(type.GetCustomAttributes(), attribute =>
                 GetAttributeTypeName(metadata, attribute) == "DataContractAttribute");
 
-            foreach (var propertyName in new[] { "ProbeName", "Timestamp", "Status", "Details", "Notes" })
+            foreach (var propertyName in new[] { "StatusText", "PromptText", "RunStateText", "SelectedReleaseVersion", "SelectedSkillName" })
             {
                 var property = Assert.Single(type.GetProperties()
                     .Select(metadata.GetPropertyDefinition), candidate =>
@@ -200,6 +236,29 @@ namespace TheKameleon.Superpowers.IntegrationTests
             using var stream = OpenRequiredEntry(package, ".vsextension/string-resources.json");
             using var resources = JsonDocument.Parse(stream);
             Assert.Equal(expectedText, resources.RootElement.GetProperty(resourceId).GetString());
+        }
+
+        private static XDocument LoadEmbeddedToolWindowXaml()
+        {
+            using var package = OpenPackage();
+            using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
+            using var assembly = new MemoryStream();
+            assemblyStream.CopyTo(assembly);
+            assembly.Position = 0;
+            using var peReader = new PEReader(assembly);
+            var metadata = peReader.GetMetadataReader();
+            var resource = Assert.Single(metadata.ManifestResources.Select(metadata.GetManifestResource), candidate =>
+                metadata.GetString(candidate.Name) == "TheKameleon.Superpowers.Vsix.SuperpowersToolWindowControl.xaml");
+
+            Assert.True(resource.Implementation.IsNil, "Remote UI XAML must be embedded, not externally linked.");
+            var header = peReader.PEHeaders.CorHeader;
+            Assert.NotNull(header);
+            var reader = peReader.GetSectionData(header.ResourcesDirectory.RelativeVirtualAddress).GetReader();
+            reader.Offset = checked((int)resource.Offset);
+            var length = reader.ReadInt32();
+            Assert.InRange(length, 1, reader.RemainingBytes);
+            using var xamlStream = new MemoryStream(reader.ReadBytes(length));
+            return XDocument.Load(xamlStream);
         }
 
         private static ZipArchive OpenPackage()

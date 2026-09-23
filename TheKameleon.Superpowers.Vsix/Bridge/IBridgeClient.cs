@@ -10,4 +10,8 @@ public interface IBridgeClient
     Task<IReadOnlyList<BridgeCapabilityResult>> GetCapabilitiesAsync(CancellationToken cancellationToken);
 
     Task<DocumentTextInfo?> GetActiveDocumentTextAsync(CancellationToken cancellationToken);
+
+    Task<SemanticTargetInfo?> GetSemanticTargetAsync(string filePath, string documentText, int position, CancellationToken cancellationToken);
+
+    Task<DocumentCompilerDiagnosticsInfo?> GetCompilerDiagnosticsAsync(string filePath, string documentText, CancellationToken cancellationToken);
 }

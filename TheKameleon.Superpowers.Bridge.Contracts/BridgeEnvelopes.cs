@@ -24,6 +24,15 @@ public sealed class BridgeRequestEnvelope
     public string? WorkspaceId { get; set; }
 
     public DateTimeOffset RequestedAtUtc { get; set; }
+
+    /// <summary>File path for operation-specific document targeting (e.g. <see cref="BridgeOperation.GetSemanticTarget"/>).</summary>
+    public string? FilePath { get; set; }
+
+    /// <summary>Captured document text for operation-specific document targeting (e.g. <see cref="BridgeOperation.GetSemanticTarget"/>).</summary>
+    public string? DocumentText { get; set; }
+
+    /// <summary>Zero-based character offset for operation-specific document targeting (e.g. <see cref="BridgeOperation.GetSemanticTarget"/>).</summary>
+    public int? Position { get; set; }
 }
 
 public sealed class BridgeResponseEnvelope
@@ -41,4 +50,9 @@ public sealed class BridgeResponseEnvelope
     public IReadOnlyList<BridgeCapabilityResult>? Capabilities { get; set; }
 
     public DocumentTextInfo? DocumentText { get; set; }
+
+    public SemanticTargetInfo? SemanticTarget { get; set; }
+
+    /// <summary>Compiler diagnostics scoped to a single document (e.g. <see cref="BridgeOperation.GetCompilerDiagnostics"/>).</summary>
+    public DocumentCompilerDiagnosticsInfo? CompilerDiagnostics { get; set; }
 }

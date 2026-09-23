@@ -40,14 +40,40 @@ public sealed class PipeBridgeClient : IBridgeClient
         return response is { Success: true } ? response.DocumentText : null;
     }
 
-    private async Task<BridgeResponseEnvelope?> SendAsync(BridgeOperation operation, CancellationToken cancellationToken)
+    public async Task<SemanticTargetInfo?> GetSemanticTargetAsync(
+        string filePath, string documentText, int position, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(
+            BridgeOperation.GetSemanticTarget, cancellationToken,
+            filePath, documentText, position).ConfigureAwait(false);
+        return response is { Success: true } ? response.SemanticTarget : null;
+    }
+
+    public async Task<DocumentCompilerDiagnosticsInfo?> GetCompilerDiagnosticsAsync(
+        string filePath, string documentText, CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(
+            BridgeOperation.GetCompilerDiagnostics, cancellationToken,
+            filePath, documentText).ConfigureAwait(false);
+        return response is { Success: true } ? response.CompilerDiagnostics : null;
+    }
+
+    private async Task<BridgeResponseEnvelope?> SendAsync(
+        BridgeOperation operation,
+        CancellationToken cancellationToken,
+        string? filePath = null,
+        string? documentText = null,
+        int? position = null)
     {
         var request = new BridgeRequestEnvelope
         {
             ProtocolVersion = BridgeProtocol.CurrentVersion,
             Operation = operation,
             RequestId = Guid.NewGuid().ToString("N"),
-            RequestedAtUtc = DateTimeOffset.UtcNow
+            RequestedAtUtc = DateTimeOffset.UtcNow,
+            FilePath = filePath,
+            DocumentText = documentText,
+            Position = position
         };
 
         for (var attempt = 0; attempt < 2; attempt++)

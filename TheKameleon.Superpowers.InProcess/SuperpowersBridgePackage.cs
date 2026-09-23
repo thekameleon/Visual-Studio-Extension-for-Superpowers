@@ -21,6 +21,8 @@ public sealed class SuperpowersBridgePackage : AsyncPackage
     public const string PackageGuidString = "d15ef75c-f455-4074-bec8-a3a3c1338990";
 
     private static readonly string LogFilePath = Path.Combine(Path.GetTempPath(), "TheKameleon.Superpowers.BridgePackage.log");
+    private const long MaxLogFileSizeBytes = 5 * 1024 * 1024;
+    private static readonly object LogLock = new();
 
     private BridgePipeServer? pipeServer;
 
@@ -81,11 +83,26 @@ public sealed class SuperpowersBridgePackage : AsyncPackage
                 System.Diagnostics.Process.GetCurrentProcess().Id,
                 message,
                 Environment.NewLine);
-            File.AppendAllText(LogFilePath, line);
+            lock (LogLock)
+            {
+                RotateIfOversized();
+                File.AppendAllText(LogFilePath, line);
+            }
         }
         catch
         {
             // Logging must never fault package initialization.
+        }
+    }
+
+    private static void RotateIfOversized()
+    {
+        var info = new FileInfo(LogFilePath);
+        if (info.Exists && info.Length > MaxLogFileSizeBytes)
+        {
+            // Truncate rather than accumulate indefinitely; this is a diagnostic probe
+            // log, not a durable audit trail.
+            File.WriteAllText(LogFilePath, string.Empty);
         }
     }
 }

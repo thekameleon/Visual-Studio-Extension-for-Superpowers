@@ -39,6 +39,11 @@ public static class VisualStudioContextCollector
         var activeDocument = await CaptureActiveDocumentAsync(clientContext, solutionProvenance, diagnostics, bridgeClient, capturedAtUtc, cancellationToken).ConfigureAwait(false);
         var openDocuments = await CaptureOpenDocumentsAsync(extensibility, solutionProvenance, cancellationToken).ConfigureAwait(false);
         var selection = await CaptureSelectionAsync(clientContext, solutionProvenance, diagnostics, cancellationToken).ConfigureAwait(false);
+        var semanticTarget = await CaptureSemanticTargetAsync(clientContext, solutionProvenance, diagnostics, bridgeClient, capturedAtUtc, cancellationToken).ConfigureAwait(false);
+        var compilerDiagnostics = await CaptureCompilerDiagnosticsAsync(clientContext, solutionProvenance, diagnostics, bridgeClient, capturedAtUtc, cancellationToken).ConfigureAwait(false);
+        var testFailures = await CaptureTestFailuresAsync(solutionProvenance, bridgeClient, cancellationToken).ConfigureAwait(false);
+        var gitStatus = await GitStatusCollector.CaptureAsync(
+            GetSolutionDirectory(solution), solutionProvenance, cancellationToken).ConfigureAwait(false);
 
         var raw = ContextCaptureComposer.Compose(
             new ContextProvenance("VisualStudioContextCollector", capturedAtUtc),
@@ -47,14 +52,51 @@ public static class VisualStudioContextCollector
             activeDocument,
             openDocuments,
             selection,
-            semanticTarget: null,
-            compilerDiagnostics: null,
+            semanticTarget: semanticTarget,
+            compilerDiagnostics: compilerDiagnostics,
             buildSummary: new BuildSummaryContextSnapshot(ContextValueState.Unavailable, solutionProvenance, "Unavailable", new CapturedTextValue(ContextValueState.Unavailable, null, detail: "Build summary capture is not yet wired to a supported collector.")),
-            testFailures: new TestFailureContextSnapshot(ContextValueState.Unavailable, solutionProvenance, "Unavailable", 0, new CapturedTextValue(ContextValueState.Unavailable, null, detail: "Test summary capture is not yet wired to a supported collector.")),
-            gitStatus: new GitStatusContextSnapshot(ContextValueState.Unavailable, solutionProvenance, null, new CapturedTextValue(ContextValueState.Unavailable, null, detail: "Git status capture is not yet wired to a supported collector.")),
+            testFailures: testFailures,
+            gitStatus: gitStatus,
             diagnostics: diagnostics);
 
         return ContextPrivacyService.Apply(raw, settings).Snapshot;
+    }
+
+    private static string? GetSolutionDirectory(SolutionContextSnapshot solution)
+    {
+        return string.IsNullOrWhiteSpace(solution.Path) ? null : Path.GetDirectoryName(solution.Path);
+    }
+
+    private static async Task<TestFailureContextSnapshot> CaptureTestFailuresAsync(
+        ContextProvenance provenance,
+        IBridgeClient bridgeClient,
+        CancellationToken cancellationToken)
+    {
+        var detail = "Installed Test Window service/result interfaces are not publicly acquirable through a supported extension contract in the current IDE surface.";
+        try
+        {
+            var bridgeCapabilities = await bridgeClient.GetCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
+            var testExplorerCapability = bridgeCapabilities.FirstOrDefault(capability => capability.Capability == BridgeCapability.TestExplorer);
+            if (testExplorerCapability is { IsAvailable: false } && !string.IsNullOrWhiteSpace(testExplorerCapability.Detail))
+            {
+                detail = testExplorerCapability.Detail;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Fall back to the default honest "unavailable" detail below.
+        }
+
+        return new TestFailureContextSnapshot(
+            ContextValueState.Unavailable,
+            provenance,
+            "Unavailable",
+            0,
+            new CapturedTextValue(ContextValueState.Unavailable, null, detail: detail));
     }
 
     private static async Task<SolutionContextSnapshot> CaptureSolutionAsync(
@@ -125,17 +167,18 @@ public static class VisualStudioContextCollector
                 new CapturedTextValue(ContextValueState.Unavailable, null, detail: "Active document text capture requires the approved in-process bridge."));
 
             var bridgeCapabilities = await bridgeClient.GetCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
-            var documentTextCapability = bridgeCapabilities.FirstOrDefault(capability => capability.Capability == BridgeCapability.DocumentText);
-            if (documentTextCapability is null || !documentTextCapability.IsAvailable)
+            var capabilityDiagnostic = ActiveDocumentBridgeResolver.EvaluateCapability(bridgeCapabilities);
+            if (capabilityDiagnostic is not null)
             {
-                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX707", documentTextCapability?.Detail ?? "Active document text bridge is not available; metadata-only capture was used.", "Info", "active-document"));
+                diagnostics.Add(capabilityDiagnostic);
                 return fallback;
             }
 
             var bridgeDocument = BridgeContextMapper.MapDocumentText("SuperpowersBridge", await bridgeClient.GetActiveDocumentTextAsync(cancellationToken).ConfigureAwait(false), capturedAtUtc);
-            if (bridgeDocument.State == ContextValueState.Unavailable)
+            var documentDiagnostic = ActiveDocumentBridgeResolver.EvaluateDocument(bridgeDocument);
+            if (documentDiagnostic is not null)
             {
-                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX708", "Active document text was unavailable from the in-process bridge; metadata-only capture was used.", "Info", "active-document"));
+                diagnostics.Add(documentDiagnostic);
                 return fallback;
             }
 
@@ -196,7 +239,13 @@ public static class VisualStudioContextCollector
                 return new SelectionContextSnapshot("Workspace", ContextValueState.Unavailable, provenance);
             }
 
-            return new SelectionContextSnapshot("Workspace", ContextValueState.Available, provenance, filePath: selectedPath.LocalPath, name: Path.GetFileName(selectedPath.LocalPath));
+            return new SelectionContextSnapshot(
+                "Workspace",
+                ContextValueState.Available,
+                provenance,
+                kind: SelectionKindResolver.InferKind(selectedPath.LocalPath),
+                filePath: selectedPath.LocalPath,
+                name: Path.GetFileName(selectedPath.LocalPath));
         }
         catch (OperationCanceledException)
         {
@@ -206,6 +255,114 @@ public static class VisualStudioContextCollector
         {
             diagnostics.Add(new ContextCaptureDiagnostic("SPCTX706", $"Selection capture failed: {exception.Message}", "Warning", "selection"));
             return new SelectionContextSnapshot("Workspace", ContextValueState.Unavailable, provenance);
+        }
+    }
+
+    private static async Task<SemanticTargetContextSnapshot?> CaptureSemanticTargetAsync(
+        IClientContext clientContext,
+        ContextProvenance provenance,
+        List<ContextCaptureDiagnostic> diagnostics,
+        IBridgeClient bridgeClient,
+        DateTimeOffset capturedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var view = await clientContext.GetActiveTextViewAsync(cancellationToken).ConfigureAwait(false);
+            if (view is null)
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX710", "No active text view is available.", "Info", "semantic-target"));
+                return new SemanticTargetContextSnapshot(ContextValueState.Unavailable, provenance);
+            }
+
+            var filePath = view.Uri?.IsFile == true ? view.Uri.LocalPath : null;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX711", "Active document has no supported file identity.", "Info", "semantic-target"));
+                return new SemanticTargetContextSnapshot(ContextValueState.Unavailable, provenance);
+            }
+
+            var bridgeCapabilities = await bridgeClient.GetCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
+            var capabilityDiagnostic = ActiveDocumentBridgeResolver.EvaluateSemanticTargetCapability(bridgeCapabilities);
+            if (capabilityDiagnostic is not null)
+            {
+                diagnostics.Add(capabilityDiagnostic);
+                return new SemanticTargetContextSnapshot(ContextValueState.Unavailable, provenance);
+            }
+
+            var documentText = view.Document.Text.ToString();
+            var position = view.Selection.Extent.Start.Offset;
+
+            var target = await bridgeClient.GetSemanticTargetAsync(filePath, documentText, position, cancellationToken).ConfigureAwait(false);
+            var bridgeTarget = BridgeContextMapper.MapSemanticTarget("SuperpowersBridge", target, capturedAtUtc);
+            if (bridgeTarget.State == ContextValueState.Unavailable)
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX712", "No semantic target (class or method) was resolved at the caret position.", "Info", "semantic-target"));
+            }
+
+            return bridgeTarget;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            diagnostics.Add(new ContextCaptureDiagnostic("SPCTX713", $"Semantic target capture failed: {exception.Message}", "Warning", "semantic-target"));
+            return new SemanticTargetContextSnapshot(ContextValueState.Unavailable, provenance);
+        }
+    }
+
+    private static async Task<CompilerDiagnosticsContextSnapshot?> CaptureCompilerDiagnosticsAsync(
+        IClientContext clientContext,
+        ContextProvenance provenance,
+        List<ContextCaptureDiagnostic> diagnostics,
+        IBridgeClient bridgeClient,
+        DateTimeOffset capturedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var view = await clientContext.GetActiveTextViewAsync(cancellationToken).ConfigureAwait(false);
+            if (view is null)
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX715", "No active text view is available.", "Info", "compiler-diagnostics"));
+                return new CompilerDiagnosticsContextSnapshot(ContextValueState.Unavailable, provenance, 0, Array.Empty<CompilerDiagnosticContextItem>());
+            }
+
+            var filePath = view.Uri?.IsFile == true ? view.Uri.LocalPath : null;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX716", "Active document has no supported file identity.", "Info", "compiler-diagnostics"));
+                return new CompilerDiagnosticsContextSnapshot(ContextValueState.Unavailable, provenance, 0, Array.Empty<CompilerDiagnosticContextItem>());
+            }
+
+            var bridgeCapabilities = await bridgeClient.GetCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
+            var capabilityDiagnostic = ActiveDocumentBridgeResolver.EvaluateCompilerDiagnosticsCapability(bridgeCapabilities);
+            if (capabilityDiagnostic is not null)
+            {
+                diagnostics.Add(capabilityDiagnostic);
+                return new CompilerDiagnosticsContextSnapshot(ContextValueState.Unavailable, provenance, 0, Array.Empty<CompilerDiagnosticContextItem>());
+            }
+
+            var documentText = view.Document.Text.ToString();
+            var result = await bridgeClient.GetCompilerDiagnosticsAsync(filePath, documentText, cancellationToken).ConfigureAwait(false);
+            if (result is null)
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX717", "Compiler diagnostics were unavailable from the in-process bridge.", "Info", "compiler-diagnostics"));
+                return new CompilerDiagnosticsContextSnapshot(ContextValueState.Unavailable, provenance, 0, Array.Empty<CompilerDiagnosticContextItem>());
+            }
+
+            return BridgeContextMapper.MapCompilerDiagnostics("SuperpowersBridge", result.TotalCount, result.Diagnostics, capturedAtUtc);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            diagnostics.Add(new ContextCaptureDiagnostic("SPCTX718", $"Compiler diagnostics capture failed: {exception.Message}", "Warning", "compiler-diagnostics"));
+            return new CompilerDiagnosticsContextSnapshot(ContextValueState.Unavailable, provenance, 0, Array.Empty<CompilerDiagnosticContextItem>());
         }
     }
 }

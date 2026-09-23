@@ -18,6 +18,7 @@ public static class ContextPrivacyService
 
         var activeDocument = TransformDocument(snapshot.ActiveDocument, options, diagnostics, "active-document");
         var openDocuments = snapshot.OpenDocuments.Select(document => TransformDocument(document, options, diagnostics, "open-document")).ToArray();
+        var compilerDiagnostics = TransformCompilerDiagnostics(snapshot.CompilerDiagnostics, options, diagnostics);
         var buildSummary = TransformBuildSummary(snapshot.BuildSummary, options, diagnostics);
         var testFailures = TransformTestFailures(snapshot.TestFailures, options, diagnostics);
         var gitStatus = TransformGitStatus(snapshot.GitStatus, options, diagnostics);
@@ -30,7 +31,7 @@ public static class ContextPrivacyService
             openDocuments,
             snapshot.Selection,
             snapshot.SemanticTarget,
-            snapshot.CompilerDiagnostics,
+            compilerDiagnostics,
             buildSummary,
             testFailures,
             gitStatus,
@@ -56,6 +57,35 @@ public static class ContextPrivacyService
 
         var content = TransformText(document.Content, options, diagnostics, scope, document.FilePath);
         return new DocumentContextSnapshot(content?.State ?? document.State, document.Provenance, document.FilePath, document.DisplayName, document.IsOpen, document.IsDirty, content);
+    }
+
+    private static CompilerDiagnosticsContextSnapshot? TransformCompilerDiagnostics(CompilerDiagnosticsContextSnapshot? snapshot, ContextPrivacyOptions options, List<ContextCaptureDiagnostic> diagnostics)
+    {
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        var items = new List<CompilerDiagnosticContextItem>();
+        foreach (var item in snapshot.Diagnostics)
+        {
+            if (IsExcluded(item.FilePath, options))
+            {
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX604", $"Excluded compiler diagnostic from '{item.FilePath}'.", "Info", "compiler-diagnostics"));
+                continue;
+            }
+
+            var message = item.Message;
+            if (options.RedactSecrets && SecretPattern.IsMatch(message))
+            {
+                message = SecretPattern.Replace(message, "[redacted-secret]");
+                diagnostics.Add(new ContextCaptureDiagnostic("SPCTX602", $"Sensitive content was redacted from a compiler diagnostic message{(item.FilePath is null ? string.Empty : $" in '{item.FilePath}'")}.", "Warning", "compiler-diagnostics"));
+            }
+
+            items.Add(new CompilerDiagnosticContextItem(item.Id, item.Severity, message, item.FilePath, item.StartLine, item.StartColumn));
+        }
+
+        return new CompilerDiagnosticsContextSnapshot(snapshot.State, snapshot.Provenance, snapshot.TotalCount, items);
     }
 
     private static BuildSummaryContextSnapshot? TransformBuildSummary(BuildSummaryContextSnapshot? snapshot, ContextPrivacyOptions options, List<ContextCaptureDiagnostic> diagnostics)

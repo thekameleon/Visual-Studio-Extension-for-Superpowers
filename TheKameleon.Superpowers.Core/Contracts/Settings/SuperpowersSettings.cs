@@ -16,7 +16,8 @@ public sealed record SuperpowersSettings
         int historyRetentionDays = 30,
         bool retainSensitiveHistoryContent = false,
         IReadOnlyList<ExclusionRule>? exclusions = null,
-        CriticalWarningPolicy? criticalWarningPolicy = null)
+        CriticalWarningPolicy? criticalWarningPolicy = null,
+        IReadOnlyList<CustomCommandAllowlistEntry>? customCommandAllowlist = null)
     {
         if (schemaVersion <= 0)
         {
@@ -52,6 +53,7 @@ public sealed record SuperpowersSettings
         RetainSensitiveHistoryContent = retainSensitiveHistoryContent;
         Exclusions = (exclusions ?? Array.Empty<ExclusionRule>()).ToArray();
         CriticalWarningPolicy = criticalWarningPolicy ?? new CriticalWarningPolicy();
+        CustomCommandAllowlist = (customCommandAllowlist ?? Array.Empty<CustomCommandAllowlistEntry>()).ToArray();
     }
 
     public int SchemaVersion { get; }
@@ -71,4 +73,6 @@ public sealed record SuperpowersSettings
     public IReadOnlyList<ExclusionRule> Exclusions { get; }
 
     public CriticalWarningPolicy CriticalWarningPolicy { get; }
+
+    public IReadOnlyList<CustomCommandAllowlistEntry> CustomCommandAllowlist { get; }
 }

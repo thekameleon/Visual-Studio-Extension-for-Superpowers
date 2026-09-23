@@ -4,7 +4,7 @@ namespace TheKameleon.Superpowers.Vsix
 {
     internal sealed class SuperpowersToolWindowControl : RemoteUserControl
     {
-        public SuperpowersToolWindowControl(ProbeResultsViewModel dataContext)
+        public SuperpowersToolWindowControl(SuperpowersWorkflowViewModel dataContext)
             : base(dataContext)
         {
         }

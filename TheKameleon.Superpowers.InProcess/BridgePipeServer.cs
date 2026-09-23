@@ -68,8 +68,18 @@ public sealed class BridgePipeServer : IDisposable
             {
                 // Server-side failures are isolated per connection attempt; keep listening
                 // for the next client rather than tearing down the whole bridge package.
+                // A short backoff prevents a persistently-failing CreateServerStream/connection
+                // path from spinning this loop and flooding the log file.
                 SuperpowersBridgePackage.LogStatic($"BridgePipeServer.AcceptLoopAsync: FAILED - {exception}");
                 server?.Dispose();
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
             }
         }
     }
@@ -92,7 +102,7 @@ public sealed class BridgePipeServer : IDisposable
             0,
             pipeSecurity,
             HandleInheritability.None,
-            PipeAccessRights.ReadWrite);
+            (PipeAccessRights)0);
     }
 
     private async Task HandleConnectionAsync(NamedPipeServerStream server, CancellationToken cancellationToken)
@@ -151,6 +161,38 @@ public sealed class BridgePipeServer : IDisposable
                         RequestId = request.RequestId,
                         Success = true,
                         DocumentText = documentText
+                    };
+
+                case BridgeOperation.GetSemanticTarget:
+                    if (string.IsNullOrWhiteSpace(request.FilePath) || request.DocumentText is null || request.Position is null)
+                    {
+                        return Failure(request.RequestId, BridgeFailureKind.ProtocolError,
+                            "GetSemanticTarget requires FilePath, DocumentText, and Position.");
+                    }
+
+                    var semanticTarget = await bridgeHost.GetSemanticTargetAsync(
+                        request.FilePath, request.DocumentText, request.Position.Value, cancellationToken).ConfigureAwait(false);
+                    return new BridgeResponseEnvelope
+                    {
+                        RequestId = request.RequestId,
+                        Success = true,
+                        SemanticTarget = semanticTarget
+                    };
+
+                case BridgeOperation.GetCompilerDiagnostics:
+                    if (string.IsNullOrWhiteSpace(request.FilePath) || request.DocumentText is null)
+                    {
+                        return Failure(request.RequestId, BridgeFailureKind.ProtocolError,
+                            "GetCompilerDiagnostics requires FilePath and DocumentText.");
+                    }
+
+                    var compilerDiagnostics = await bridgeHost.GetCompilerDiagnosticsAsync(
+                        request.FilePath, request.DocumentText, cancellationToken).ConfigureAwait(false);
+                    return new BridgeResponseEnvelope
+                    {
+                        RequestId = request.RequestId,
+                        Success = true,
+                        CompilerDiagnostics = compilerDiagnostics
                     };
 
                 default:

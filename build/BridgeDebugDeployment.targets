@@ -13,6 +13,33 @@
 		<VSSDKTargetPlatformRegRootSuffix Condition="'$(VSSDKTargetPlatformRegRootSuffix)' == ''">Exp</VSSDKTargetPlatformRegRootSuffix>
 		<VsixDeployOnDebug Condition="'$(BuildingInsideVisualStudio)' == 'true' And '$(Configuration)' == 'Debug' And $([System.Text.RegularExpressions.Regex]::IsMatch('$(DeployTargetInstanceId)', '^[a-zA-Z0-9_-]+$')) And '$(VSSDKTargetPlatformRegRootSuffix)' == 'Exp' And ('$(RootSuffix)' == '' Or '$(RootSuffix)' == 'Exp')">true</VsixDeployOnDebug>
 	</PropertyGroup>
+	<UsingTask TaskName="CheckNoRunningExpInstance" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<InstanceId ParameterType="System.String" Required="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System" />
+			<Using Namespace="System.Diagnostics" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+				foreach (var process in Process.GetProcessesByName("devenv"))
+				{
+					using (process)
+					{
+						string title;
+						try { title = process.MainWindowTitle; }
+						catch { continue; }
+						if (!string.IsNullOrEmpty(title) && title.IndexOf("Experimental Instance", StringComparison.OrdinalIgnoreCase) >= 0)
+						{
+							Log.LogError(
+								"An experimental Visual Studio instance (RootSuffix Exp, PID " + process.Id + ") is already running: \"" + title + "\". " +
+								"The in-process bridge is a net472 assembly and cannot be reloaded into a running process; close that Exp instance before F5, " +
+								"then relaunch so it loads the newly built bridge.");
+						}
+					}
+				}
+			]]></Code>
+		</Task>
+	</UsingTask>
 	<Target Name="ValidateNativeBridgeDebugTarget"
 					BeforeTargets="PrepareForBuild"
 					Condition="'$(BuildingInsideVisualStudio)' == 'true' And '$(DesignTimeBuild)' != 'true' And '$(Configuration)' == 'Debug'">
@@ -20,6 +47,20 @@
 					 Text="Select an explicit Visual Studio installation (DeployTargetInstanceId) in the modern VSIX Debug properties before F5; the bridge uses that same selection." />
 		<Error Condition="('$(VSSDKTargetPlatformRegRootSuffix)' != '' And '$(VSSDKTargetPlatformRegRootSuffix)' != 'Exp') Or ('$(RootSuffix)' != '' And '$(RootSuffix)' != 'Exp')"
 					 Text="Superpowers native debug deployment supports the Exp profile only." />
+		<CheckNoRunningExpInstance InstanceId="$(DeployTargetInstanceId)"
+					Condition="'$(BridgeNativeDebugDeployment)' == 'true'" />
 		<Message Importance="High" Text="Superpowers native F5 deployment configured: instance $(DeployTargetInstanceId), profile Exp. The solution Deploy phase installs both VSIX projects; building alone does not install them." />
-  </Target>
+		</Target>
+	<Target Name="RefreshExpExtensionCache"
+					AfterTargets="DeployVsixExtensionFiles"
+					Condition="'$(DeployExtension)' == 'true' And '$(CreateVsixContainer)' == 'true' And '$(VSSDKTargetPlatformRegRootSuffix)' == 'Exp' And '$(ExtensionsPath)' != ''">
+		<!--
+			VSSDK's EnableExtension task does not reliably refresh the on-disk pkgdef cache when no
+			target devenv.exe process is running to receive the change broadcast (the common F5 case
+			after a previous Exp session was closed). Touching the sentinel file that Visual Studio's
+			Extension Manager watches forces the next Exp launch to rescan Extensions instead of using
+			a stale cached folder mapping, without needing a manual `devenv /UpdateConfiguration` run.
+		-->
+		<Touch Files="$(ExtensionsPath)\extensions.configurationchanged" AlwaysCreate="true" />
+	</Target>
 </Project>

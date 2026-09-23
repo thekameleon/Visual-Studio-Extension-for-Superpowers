@@ -35,4 +35,16 @@ public sealed class UnavailableBridgeClient : IBridgeClient
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult<DocumentTextInfo?>(null);
     }
+
+    public Task<SemanticTargetInfo?> GetSemanticTargetAsync(string filePath, string documentText, int position, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<SemanticTargetInfo?>(null);
+    }
+
+    public Task<DocumentCompilerDiagnosticsInfo?> GetCompilerDiagnosticsAsync(string filePath, string documentText, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult<DocumentCompilerDiagnosticsInfo?>(null);
+    }
 }

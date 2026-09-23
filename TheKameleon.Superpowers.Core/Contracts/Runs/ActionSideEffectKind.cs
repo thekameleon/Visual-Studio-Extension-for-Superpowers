@@ -7,5 +7,6 @@ public enum ActionSideEffectKind
     BuildExecution = 2,
     TestExecution = 3,
     EditApplication = 4,
-    ManualEvidenceImport = 5
+    ManualEvidenceImport = 5,
+    CustomCommandExecution = 6
 }

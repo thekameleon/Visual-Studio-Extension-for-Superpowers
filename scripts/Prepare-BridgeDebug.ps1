@@ -89,6 +89,12 @@ if ($LASTEXITCODE -ne 0) {
 	throw "Bridge debug preparation failed with exit code $LASTEXITCODE. Review the MSBuild output; deployment/activation is not confirmed."
 }
 
-Write-Host 'Bridge build/deployment completed. Runtime activation is not yet verified.'
+Write-Host "Refreshing VS $VisualStudioVersion Exp extension cache (devenv /RootSuffix Exp /UpdateConfiguration) so the bridge pkgdef points at the deployed folder..."
+& $devenv /RootSuffix Exp /UpdateConfiguration
+if ($LASTEXITCODE -ne 0) {
+	throw "devenv /UpdateConfiguration failed with exit code $LASTEXITCODE. The bridge was deployed but the Exp extension cache may still reference a stale folder."
+}
+
+Write-Host 'Bridge build/deployment completed and Exp extension cache refreshed.'
 Write-Host 'Now use F5 on TheKameleon.Superpowers.Vsix, selecting this same IDE installation and Exp profile.'
 Write-Host 'This script does not launch an IDE, attach a debugger, install the modern VSIX, or change Marketplace packaging.'
