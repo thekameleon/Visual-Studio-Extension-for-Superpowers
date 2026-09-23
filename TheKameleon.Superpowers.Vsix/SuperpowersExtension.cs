@@ -13,11 +13,6 @@ namespace TheKameleon.Superpowers.Vsix
             Children =
             [
                 MenuChild.Command<PlanCommand>(),
-                MenuChild.Command<ContextProbeCommand>(),
-                MenuChild.Command<PublishDiagnosticProbeCommand>(),
-                MenuChild.Command<ClearDiagnosticProbeCommand>(),
-                MenuChild.Command<BuildProbeCommand>(),
-                MenuChild.Command<BridgeProbeCommand>(),
             ],
         };
 

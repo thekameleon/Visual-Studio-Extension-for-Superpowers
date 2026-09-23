@@ -9,9 +9,6 @@ namespace TheKameleon.Superpowers.Vsix
     [VisualStudioContribution]
     public sealed class SuperpowersToolWindow : ToolWindow
     {
-        internal static ProbeResultsViewModel ProbeResults { get; } = new();
-
-        private SuperpowersWorkflowViewModel? workflow;
         private SuperpowersToolWindowControl? control;
 
         public SuperpowersToolWindow()
@@ -25,17 +22,11 @@ namespace TheKameleon.Superpowers.Vsix
             Placement = ToolWindowPlacement.DocumentWell,
         };
 
-        public override async Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
+        public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (this.control is null)
-            {
-                this.workflow = new SuperpowersWorkflowViewModel(this.Extensibility);
-                this.control = new SuperpowersToolWindowControl(this.workflow);
-                await this.workflow.InitializeAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            return this.control;
+            this.control ??= new SuperpowersToolWindowControl(new SuperpowersViewModel());
+            return Task.FromResult<IRemoteUserControl>(this.control);
         }
 
         protected override void Dispose(bool disposing)
@@ -44,8 +35,6 @@ namespace TheKameleon.Superpowers.Vsix
             {
                 this.control?.Dispose();
                 this.control = null;
-                this.workflow?.Dispose();
-                this.workflow = null;
             }
 
             base.Dispose(disposing);

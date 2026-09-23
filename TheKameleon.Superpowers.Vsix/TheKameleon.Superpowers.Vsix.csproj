@@ -4,7 +4,7 @@
     <TargetFramework>net8.0-windows8.0</TargetFramework>
     <Version>1.0.1</Version>
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <SuperpowersBuildRole>Consumer</SuperpowersBuildRole>
+    <SuperpowersBuildRole>Owner</SuperpowersBuildRole>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
@@ -13,7 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="3.1.9" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Sdk" Version="17.14.40608" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.Extensibility.Build" Version="17.14.40608" PrivateAssets="all" />
   </ItemGroup>
@@ -22,10 +21,8 @@
     <EmbeddedResource Include="SuperpowersToolWindowControl.xaml" />
     <Page Remove="SuperpowersToolWindowControl.xaml" />
     <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*" Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" IncludeInVSIX="true" />
-    <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" IncludeOutputGroupsInVSIX="" IncludeOutputGroupsInVSIXLocalOnly="" IncludeAssets="none" PrivateAssets="all" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Core\TheKameleon.Superpowers.Core.csproj" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
   </ItemGroup>
-  <Import Project="..\build\BridgeDebugDeployment.targets" />
   <Import Project="..\build\SuperpowersBuildVersion.targets" />
 </Project>

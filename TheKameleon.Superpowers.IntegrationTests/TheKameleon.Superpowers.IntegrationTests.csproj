@@ -29,15 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
-    <ProjectReference Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Vsix\TheKameleon.Superpowers.Vsix.csproj" ReferenceOutputAssembly="false" />
-    <None Include="..\TheKameleon.Superpowers.InProcess\SuperpowersBridge.vsct" Link="SuperpowersBridge.vsct" CopyToOutputDirectory="Always" />
-    <None Include="..\TheKameleon.Superpowers.InProcess\TheKameleon.Superpowers.InProcess.csproj" Link="DebugDeployment\Bridge.csproj" CopyToOutputDirectory="Always" />
-    <None Include="..\scripts\Prepare-BridgeDebug.ps1" Link="DebugDeployment\Prepare-BridgeDebug.ps1" CopyToOutputDirectory="Always" />
-    <None Include="..\build\BridgeDebugDeployment.targets" Link="DebugDeployment\BridgeDebugDeployment.targets" CopyToOutputDirectory="Always" />
-    <None Include="..\TheKameleon.Superpowers.slnx" Link="DebugDeployment\Solution.slnx" CopyToOutputDirectory="Always" />
-    <None Include="..\TheKameleon.Superpowers.Vsix\TheKameleon.Superpowers.Vsix.csproj" Link="DebugDeployment\Modern.csproj" CopyToOutputDirectory="Always" />
-    <None Include="..\TheKameleon.Superpowers.InProcess\bin\$(Configuration)\net472\TheKameleon.Superpowers.InProcess.vsix" Link="TheKameleon.Superpowers.InProcess.vsix" CopyToOutputDirectory="Always" />
     <None Include="..\TheKameleon.Superpowers.Vsix\bin\$(Configuration)\net8.0-windows8.0\TheKameleon.Superpowers.Vsix.vsix" Link="TheKameleon.Superpowers.Vsix.vsix" CopyToOutputDirectory="Always" />
   </ItemGroup>
 

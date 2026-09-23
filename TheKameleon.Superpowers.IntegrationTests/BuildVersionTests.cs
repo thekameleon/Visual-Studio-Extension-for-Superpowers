@@ -21,7 +21,7 @@ public sealed class BuildVersionTests : IDisposable
             new XElement("Target", new XAttribute("Name", "GetAssemblyVersion")),
             new XElement("Target", new XAttribute("Name", "CoreCompile")),
             new XElement("Target", new XAttribute("Name", "Build"), new XAttribute("DependsOnTargets", "GetAssemblyVersion;CoreCompile"),
-                new XElement("WriteLinesToFile", new XAttribute("File", "$(SuperpowersBridgeVersionFile).result"),
+                new XElement("WriteLinesToFile", new XAttribute("File", "$(SuperpowersBuildVersionFile).result"),
                     new XAttribute("Lines", "$(FileVersion)"), new XAttribute("Overwrite", "true")))));
         project.Save(Path.Combine(directory, "fixture.proj"));
     }
@@ -130,7 +130,7 @@ public sealed class BuildVersionTests : IDisposable
             CreateNoWindow = true,
         };
         foreach (var argument in new[] { "msbuild", "fixture.proj", "-nologo", "-v:minimal", "-t:Build", "-nr:false",
-            $"-p:SuperpowersBuildRole={role}", $"-p:SuperpowersBridgeVersionFile={Path.Combine(directory, stamp)}",
+            $"-p:SuperpowersBuildRole={role}", $"-p:SuperpowersBuildVersionFile={Path.Combine(directory, stamp)}",
             $"-p:DesignTimeBuild={designTime.ToString().ToLowerInvariant()}" })
         {
             start.ArgumentList.Add(argument);
