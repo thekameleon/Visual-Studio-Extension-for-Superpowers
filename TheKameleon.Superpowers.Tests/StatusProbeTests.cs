@@ -1,5 +1,6 @@
 using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 using TheKameleon.Superpowers.Skills.Setup;
 using TheKameleon.Superpowers.Skills.Status;
 
@@ -56,6 +57,28 @@ public sealed class StatusProbeTests : IDisposable
         File.Delete(profile.Paths.AgentFile);
 
         Assert.Equal(StatusLevel.Fail, Assert.Single(Run(), check => check.Title == "Superpowers agent").Level);
+    }
+
+    [Fact]
+    public void MissingFunctionAgentFileWarnsButHealthyInstallHasNone()
+    {
+        Install();
+
+        Assert.DoesNotContain(Run(), check => check.Title == "Per-function agents");
+
+        new SuperpowersSetup(profile.Paths).Install(
+            new InstalledRelease("v1.0.0", "abc", "bundled"),
+            new SkillArchiveReadResult(new[] { TestSupport.Skill("alpha") }, Array.Empty<string>()),
+            overwriteEdited: false,
+            new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "gpt-5") } });
+
+        Assert.DoesNotContain(Run(), check => check.Title == "Per-function agents");
+
+        File.Delete(Path.Combine(profile.Paths.AgentsRoot, "superpowers-review.agent.md"));
+
+        var check = Assert.Single(Run(), check => check.Title == "Per-function agents");
+        Assert.Equal(StatusLevel.Warning, check.Level);
+        Assert.Contains("Review", check.Message, StringComparison.Ordinal);
     }
 
     [Fact]

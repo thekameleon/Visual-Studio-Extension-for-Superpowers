@@ -1,5 +1,6 @@
 using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 
 namespace TheKameleon.Superpowers.Skills.Status;
 
@@ -32,6 +33,17 @@ public sealed class StatusProbe(ProfilePaths paths)
         }
 
         checks.Add(AgentCheck(state));
+
+        var missingFunctionAgents = state.FunctionAgentFiles
+            .Where(agent => !File.Exists(AgentFileWriter.FunctionAgentFilePath(paths, Enum.Parse<SuperpowersFunction>(agent.Function))))
+            .Select(agent => agent.Function)
+            .ToArray();
+        if (missingFunctionAgents.Length > 0)
+        {
+            checks.Add(new StatusCheck("Per-function agents", StatusLevel.Warning,
+                $"These function agent files are missing and will fall back to the General agent's model (or none): {string.Join(", ", missingFunctionAgents)}. Use Repair to recreate them."));
+        }
+
         checks.Add(AlwaysOnCheck(state));
 
         if (copilotLogDirectory is not null)
