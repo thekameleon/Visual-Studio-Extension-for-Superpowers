@@ -10,6 +10,12 @@ public sealed record LoadedCatalogRelease(
     IReadOnlyList<string> Assets,
     IReadOnlyList<ParseDiagnostic> Diagnostics)
 {
+    public string ArchivePath { get; init; } = string.Empty;
+
+    public bool IsPrerelease { get; init; }
+
+    public DateTimeOffset? PublishedAtUtc { get; init; }
+
     public bool HasErrors => Diagnostics.Any(diagnostic => diagnostic.Severity == ParseDiagnosticSeverity.Error)
         || AdapterManifest.HasErrors
         || (PlanMetadata?.SchemaVersion ?? PlanEntryPointMetadata.CurrentSchemaVersion) <= 0

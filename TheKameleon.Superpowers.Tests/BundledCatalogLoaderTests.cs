@@ -12,7 +12,7 @@ public sealed class BundledCatalogLoaderTests : IDisposable
     [Fact]
     public void LoadsBundledCatalogFromRealDirectory()
     {
-        var root = GetRepositoryRelativePath("bundled-catalog", "obra.superpowers", "2026-09-21");
+        var root = TestSupport.RepositoryPath("bundled-catalog", "obra.superpowers", "2026-09-21");
 
         var result = BundledCatalogLoader.LoadFromDirectory(root);
 
@@ -34,6 +34,18 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Equal(2, latest.PlanMetadata.Composition.Count);
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/brainstorming/SKILL.md");
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/writing-plans/SKILL.md");
+    }
+
+    [Fact]
+    public void ExposesArchivePathPrereleaseFlagAndPublishDate()
+    {
+        var result = BundledCatalogLoader.LoadFromDirectory(TestSupport.BundledCatalogRoot);
+
+        var latest = Assert.Single(result.Releases, release => release.ReleaseTag == "v6.4.1");
+        Assert.Equal("releases/v6.4.1/source.zip", latest.ArchivePath);
+        Assert.False(latest.IsPrerelease);
+        Assert.Equal(new DateTimeOffset(2026, 9, 19, 0, 32, 44, TimeSpan.Zero), latest.PublishedAtUtc);
+        Assert.Equal("v6.4.1", ReleaseSelection.DefaultRelease(result.Releases)!.ReleaseTag);
     }
 
     [Fact]
@@ -71,7 +83,7 @@ public sealed class BundledCatalogLoaderTests : IDisposable
 
     private string CreateTamperedCopy()
     {
-        var sourceRoot = GetRepositoryRelativePath("bundled-catalog", "obra.superpowers", "2026-09-21");
+        var sourceRoot = TestSupport.RepositoryPath("bundled-catalog", "obra.superpowers", "2026-09-21");
         var destinationRoot = Path.Combine(tempRoot, "tampered-catalog");
         CopyDirectory(sourceRoot, destinationRoot);
         return destinationRoot;
@@ -172,22 +184,6 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         };
         File.WriteAllText(Path.Combine(root, "catalog.json"), JsonSerializer.Serialize(catalog));
         return root;
-    }
-
-    private static string GetRepositoryRelativePath(params string[] segments)
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "TheKameleon.Superpowers.slnx")))
-            {
-                return Path.Combine(new[] { current.FullName }.Concat(segments).ToArray());
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate repository root from the test output directory.");
     }
 
     private static string ComputeSha256(string path)

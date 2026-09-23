@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -132,6 +133,14 @@ public static class BundledCatalogLoader
             ValidateManifestSkillsAndDependencies(releaseTag, adapterManifest, archiveEntries, diagnostics, skills, assets);
         }
 
+        DateTimeOffset? publishedAtUtc = DateTimeOffset.TryParse(
+            release.PublishedAtUtc,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var published)
+            ? published
+            : null;
+
         return new LoadedCatalogRelease(
             releaseTag,
             provenance.ResolvedCommit ?? release.ResolvedCommit ?? string.Empty,
@@ -140,7 +149,12 @@ public static class BundledCatalogLoader
             planMetadata,
             skills,
             assets.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
-            diagnostics);
+            diagnostics)
+        {
+            ArchivePath = release.ArchivePath ?? string.Empty,
+            IsPrerelease = release.Prerelease,
+            PublishedAtUtc = publishedAtUtc,
+        };
     }
 
     private static PlanEntryPointMetadata? LoadPlanMetadata(
@@ -580,6 +594,10 @@ public static class BundledCatalogLoader
         public string? PlanMetadataPath { get; init; }
 
         public string? ProvenancePath { get; init; }
+
+        public bool Prerelease { get; init; }
+
+        public string? PublishedAtUtc { get; init; }
     }
 
     private sealed class PlanMetadataModel
