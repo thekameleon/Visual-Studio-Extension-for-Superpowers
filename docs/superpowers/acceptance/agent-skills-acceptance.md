@@ -17,5 +17,6 @@ Test solution: a small C# class library with `PriceCalculator.ApplyDiscount(deci
 | U1 | Install, Repair, Remove, always-on on/off from the tool window | each reports success; files appear/disappear as the README table says | | | |
 | U2 | Status panel after Install and a new chat thread | all checks OK; the diagnostic line shows OK | | | |
 | U3 | Icon in menu, tool window, Manage Extensions; light, dark, high contrast | legible in every theme | | | |
+| U4 | Select **Check for newer releases**. With no newer upstream release, expect "You already have every published release." With **Include prereleases** checked, any newer prerelease should offer a download prompt; **Cancel** must change nothing. | status text matches; Cancel leaves the release list and installed state unchanged | | NOT RUN — requires a live Visual Studio Exp instance with network access to GitHub, unavailable in this automated environment | |
 
 A5 gates the release: if referenced skills are still not loaded, record the evidence and decide on the index-skill fallback (spec §13) before publishing.

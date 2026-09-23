@@ -25,6 +25,11 @@
                               AutomationProperties.Name="Superpowers release" />
                 </Grid>
 
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Command="{Binding CheckForUpdatesCommand}" Content="Check for newer releases" Padding="12,2" Margin="0,0,8,0" AutomationProperties.Name="Check GitHub for newer Superpowers releases" />
+                    <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" Content="Include prereleases" VerticalAlignment="Center" AutomationProperties.Name="Include prerelease versions" />
+                </StackPanel>
+
                 <WrapPanel Margin="0,8,0,0">
                     <Button Command="{Binding InstallCommand}" Content="Install" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Install the selected Superpowers release" />
                     <Button Command="{Binding RepairCommand}" Content="Repair" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Repair the Superpowers installation" />

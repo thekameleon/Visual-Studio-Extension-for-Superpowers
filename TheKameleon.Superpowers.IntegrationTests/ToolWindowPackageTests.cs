@@ -115,7 +115,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var view = LoadEmbeddedToolWindowXaml();
             XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand" })
+            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand", "CheckForUpdatesCommand" })
             {
                 var button = Assert.Single(view.Descendants(presentation + "Button"), element =>
                     (string?)element.Attribute("Command") == $"{{Binding {command}}}");
@@ -144,7 +144,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 metadata.GetString(candidate.Name) == "SuperpowersViewModel");
 
             Assert.Contains(type.GetCustomAttributes(), attribute => GetAttributeTypeName(metadata, attribute) == "DataContractAttribute");
-            foreach (var propertyName in new[] { "StatusText", "InstalledText", "SelectedReleaseVersion", "AlwaysOnButtonText", "IsIdle", "Checks", "Tips" })
+            foreach (var propertyName in new[] { "StatusText", "InstalledText", "SelectedReleaseVersion", "AlwaysOnButtonText", "IsIdle", "Checks", "Tips", "IncludePrereleases" })
             {
                 var property = Assert.Single(type.GetProperties().Select(metadata.GetPropertyDefinition), candidate =>
                     metadata.GetString(candidate.Name) == propertyName);
