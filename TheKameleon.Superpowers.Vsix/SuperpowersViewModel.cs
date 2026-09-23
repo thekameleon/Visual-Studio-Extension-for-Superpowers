@@ -22,13 +22,16 @@ namespace TheKameleon.Superpowers.Vsix
     [DataContract]
     internal sealed class ModelPreferenceRow : NotifyPropertyChangedObject
     {
+        private readonly Func<SuperpowersFunction, string?>? suggestModel;
         private SuperpowersFunction function;
         private string family = string.Empty;
         private string model = string.Empty;
 
-        public ModelPreferenceRow(SuperpowersFunction function)
+        public ModelPreferenceRow(SuperpowersFunction function, Func<SuperpowersFunction, string?>? suggestModel = null)
         {
+            this.suggestModel = suggestModel;
             this.function = function;
+            this.model = suggestModel?.Invoke(function) ?? string.Empty;
         }
 
         [DataMember]
@@ -40,6 +43,10 @@ namespace TheKameleon.Superpowers.Vsix
                 if (this.SetProperty(ref this.function, value))
                 {
                     this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
+                    if (string.IsNullOrWhiteSpace(this.model))
+                    {
+                        this.Model = this.suggestModel?.Invoke(value) ?? this.model;
+                    }
                 }
             }
         }
@@ -96,6 +103,7 @@ namespace TheKameleon.Superpowers.Vsix
             this.modelCatalogCacheStore = new ModelCatalogCacheStore(this.paths);
             this.modelPreferencesStore = new ModelPreferencesStore(this.paths);
             this.modelCatalog = this.modelCatalogCacheStore.Load();
+            this.RefreshModelNameOptions();
             this.modelCatalogStatusText = this.modelCatalog is null
                 ? "Model list not loaded yet. Type a model name manually, or select Refresh model list."
                 : $"Model list last refreshed {this.modelCatalog.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC.";
@@ -107,7 +115,7 @@ namespace TheKameleon.Superpowers.Vsix
             this.ToggleAlwaysOnCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.ToggleAlwaysOnAsync, cancellationToken));
             this.CheckForUpdatesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.CheckForUpdatesAsync, cancellationToken));
             this.RefreshModelCatalogCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshModelCatalogAsync, cancellationToken));
-            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General)); return Task.CompletedTask; });
+            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General, this.SuggestModel)); return Task.CompletedTask; });
             this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
             this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
         }
@@ -216,6 +224,9 @@ namespace TheKameleon.Superpowers.Vsix
 
         [DataMember]
         public ObservableList<SuperpowersFunction> FunctionOptions { get; } = new(Enum.GetValues<SuperpowersFunction>());
+
+        [DataMember]
+        public ObservableList<string> ModelNameOptions { get; } = new();
 
         [DataMember]
         public IAsyncCommand RefreshModelCatalogCommand { get; }
@@ -455,8 +466,21 @@ namespace TheKameleon.Superpowers.Vsix
 
             this.modelCatalog = result.Catalog;
             this.modelCatalogCacheStore.Save(result.Catalog!);
+            this.RefreshModelNameOptions();
             this.ModelCatalogStatusText = $"Model list refreshed {result.Catalog!.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC ({result.Catalog.Models.Count} models).";
         }
+
+        private void RefreshModelNameOptions()
+        {
+            this.ModelNameOptions.Clear();
+            if (this.modelCatalog is not null)
+            {
+                this.ModelNameOptions.AddRange(this.modelCatalog.Models.Select(model => model.Name));
+            }
+        }
+
+        private string? SuggestModel(SuperpowersFunction function) =>
+            SuperpowersFunctionModelSuggestion.Suggest(this.modelCatalog, function, this.SelectedPlan);
 
         private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
         {
