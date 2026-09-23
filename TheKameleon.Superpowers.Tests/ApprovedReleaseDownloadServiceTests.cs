@@ -27,6 +27,9 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
         Assert.False(result.Validation.HasErrors);
         Assert.True(File.Exists(Path.Combine(targetDirectory, "catalog.json")));
         Assert.True(File.Exists(Path.Combine(targetDirectory, "releases", release.ReleaseTag, "source.zip")));
+        var loaded = Assert.Single(result.Validation.Releases);
+        Assert.Equal(release.IsPrerelease, loaded.IsPrerelease);
+        Assert.Equal(release.PublishedAtUtc.ToUnixTimeSeconds(), loaded.PublishedAtUtc!.Value.ToUnixTimeSeconds());
     }
 
     [Fact]

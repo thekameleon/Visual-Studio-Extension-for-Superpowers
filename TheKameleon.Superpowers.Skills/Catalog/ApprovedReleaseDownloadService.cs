@@ -365,6 +365,8 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
                 {
                     releaseTag = release.ReleaseTag,
                     resolvedCommit = release.ReleaseTag,
+                    prerelease = release.IsPrerelease,
+                    publishedAtUtc = release.PublishedAtUtc.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
                     licensePath = $"releases/{release.ReleaseTag}/LICENSE.txt",
                     archivePath = $"releases/{release.ReleaseTag}/source.zip",
                     adapterManifestPath = $"releases/{release.ReleaseTag}/adapter-manifest.json",
