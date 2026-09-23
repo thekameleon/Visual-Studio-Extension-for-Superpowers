@@ -107,7 +107,7 @@
                                           SelectedItem="{Binding Function, Mode=TwoWay}"
                                           Margin="0,0,4,0"
                                           AutomationProperties.Name="Superpowers function" />
-                                <TextBox Grid.Column="1" Text="{Binding Family, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="4,0" AutomationProperties.Name="Model family" />
+                                <TextBlock Grid.Column="1" Text="{Binding Provider}" Margin="4,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Model provider" />
                                 <ComboBox Grid.Column="2" IsEditable="True"
                                           Text="{Binding Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           ItemsSource="{Binding DataContext.ModelNameOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"

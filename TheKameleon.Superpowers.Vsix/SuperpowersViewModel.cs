@@ -23,14 +23,15 @@ namespace TheKameleon.Superpowers.Vsix
     internal sealed class ModelPreferenceRow : NotifyPropertyChangedObject
     {
         private readonly Func<SuperpowersFunction, string?>? suggestModel;
+        private readonly Func<string, string?>? lookupProvider;
         private SuperpowersFunction function;
-        private string family = string.Empty;
         private string model = string.Empty;
         private string? lastSuggestion;
 
-        public ModelPreferenceRow(SuperpowersFunction function, Func<SuperpowersFunction, string?>? suggestModel = null)
+        public ModelPreferenceRow(SuperpowersFunction function, Func<SuperpowersFunction, string?>? suggestModel = null, Func<string, string?>? lookupProvider = null)
         {
             this.suggestModel = suggestModel;
+            this.lookupProvider = lookupProvider;
             this.function = function;
             this.model = suggestModel?.Invoke(function) ?? string.Empty;
             this.lastSuggestion = string.IsNullOrEmpty(this.model) ? null : this.model;
@@ -59,18 +60,26 @@ namespace TheKameleon.Superpowers.Vsix
         public string FunctionLabel => this.Function.ToString();
 
         [DataMember]
-        public string Family
-        {
-            get => this.family;
-            set => this.SetProperty(ref this.family, value);
-        }
-
-        [DataMember]
         public string Model
         {
             get => this.model;
-            set => this.SetProperty(ref this.model, value);
+            set
+            {
+                if (this.SetProperty(ref this.model, value))
+                {
+                    this.RaiseNotifyPropertyChangedEvent(nameof(this.Provider));
+                }
+            }
         }
+
+        /// <summary>Derived, never stored: looked up from the fetched catalog by the current
+        /// Model name. Empty when Model is blank or doesn't match anything in the catalog
+        /// (including when the catalog hasn't been fetched yet, or the user typed a model name
+        /// the catalog doesn't know about).</summary>
+        [DataMember]
+        public string Provider => string.IsNullOrWhiteSpace(this.model)
+            ? string.Empty
+            : this.lookupProvider?.Invoke(this.model) ?? string.Empty;
     }
 
     [DataContract]
@@ -119,7 +128,7 @@ namespace TheKameleon.Superpowers.Vsix
             this.ToggleAlwaysOnCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.ToggleAlwaysOnAsync, cancellationToken));
             this.CheckForUpdatesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.CheckForUpdatesAsync, cancellationToken));
             this.RefreshModelCatalogCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshModelCatalogAsync, cancellationToken));
-            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General, this.SuggestModel)); return Task.CompletedTask; });
+            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General, this.SuggestModel, this.LookupProvider)); return Task.CompletedTask; });
             this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
             this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
         }
@@ -308,7 +317,7 @@ namespace TheKameleon.Superpowers.Vsix
 
             this.SelectedPlan = savedPreferences.Plan;
             this.FunctionRows.Clear();
-            this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function) { Family = p.Family, Model = p.Model }));
+            this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function, lookupProvider: this.LookupProvider) { Model = p.Model }));
         }
 
         private async Task InstallAsync(CancellationToken cancellationToken)
@@ -491,12 +500,15 @@ namespace TheKameleon.Superpowers.Vsix
         private string? SuggestModel(SuperpowersFunction function) =>
             SuperpowersFunctionModelSuggestion.Suggest(this.modelCatalog, function, this.SelectedPlan);
 
+        private string? LookupProvider(string modelName) =>
+            this.modelCatalog?.Models.FirstOrDefault(model => string.Equals(model.Name, modelName, StringComparison.OrdinalIgnoreCase))?.Provider;
+
         private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
         {
             var deduped = new Dictionary<SuperpowersFunction, ModelPreference>();
             foreach (var row in this.FunctionRows.Where(row => !string.IsNullOrWhiteSpace(row.Model)))
             {
-                deduped[row.Function] = new ModelPreference(row.Function, row.Family.Trim(), row.Model.Trim());
+                deduped[row.Function] = new ModelPreference(row.Function, row.Model.Trim());
             }
 
             var preferences = new ModelPreferences

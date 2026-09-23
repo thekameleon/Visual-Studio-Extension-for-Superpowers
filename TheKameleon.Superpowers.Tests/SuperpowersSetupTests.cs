@@ -138,7 +138,7 @@ public sealed class SuperpowersSetupTests : IDisposable
     {
         var preferences = new ModelPreferences
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
         };
         Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
 
@@ -153,7 +153,7 @@ public sealed class SuperpowersSetupTests : IDisposable
     {
         var preferences = new ModelPreferences
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.General, "Anthropic", "Claude Opus 5.5") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.General, "Claude Opus 5.5") },
         };
         Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
         Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(profile.Paths.AgentFile));
@@ -169,7 +169,7 @@ public sealed class SuperpowersSetupTests : IDisposable
     {
         var withReview = new ModelPreferences
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
         };
         Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
         var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
@@ -187,7 +187,7 @@ public sealed class SuperpowersSetupTests : IDisposable
     {
         var withReview = new ModelPreferences
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
         };
         Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
         var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);

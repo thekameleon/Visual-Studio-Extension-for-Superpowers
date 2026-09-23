@@ -13,7 +13,7 @@ public enum SuperpowersFunction
     Finish,
 }
 
-public sealed record ModelPreference(SuperpowersFunction Function, string Family, string Model);
+public sealed record ModelPreference(SuperpowersFunction Function, string Model);
 
 public sealed record ModelPreferences
 {

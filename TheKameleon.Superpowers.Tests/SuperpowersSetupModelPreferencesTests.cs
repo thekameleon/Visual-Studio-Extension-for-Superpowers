@@ -15,7 +15,7 @@ public sealed class SuperpowersSetupModelPreferencesTests
         var skill = TestSupport.Skill("brainstorming");
         var preferences = ModelPreferences.Empty with
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "Claude", "Claude Opus 5.5") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "Claude Opus 5.5") },
         };
 
         var result = setup.Install(

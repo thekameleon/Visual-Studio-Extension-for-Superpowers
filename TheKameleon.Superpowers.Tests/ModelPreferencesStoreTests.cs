@@ -26,8 +26,8 @@ public sealed class ModelPreferencesStoreTests
             Plan = CopilotPlan.Business,
             Preferences = new[]
             {
-                new ModelPreference(SuperpowersFunction.Review, "Claude", "Claude Opus 5.5"),
-                new ModelPreference(SuperpowersFunction.Debug, "GPT", "GPT-5.4"),
+                new ModelPreference(SuperpowersFunction.Review, "Claude Opus 5.5"),
+                new ModelPreference(SuperpowersFunction.Debug, "GPT-5.4"),
             },
         };
 
@@ -36,6 +36,28 @@ public sealed class ModelPreferencesStoreTests
 
         Assert.Equal(CopilotPlan.Business, loaded.Plan);
         Assert.Equal(2, loaded.Preferences.Count);
+        Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Model == "Claude Opus 5.5");
+    }
+
+    [Fact]
+    public void LoadIgnoresALeftoverFamilyPropertyFromAnOlderFileFormat()
+    {
+        using var profile = new TempProfile();
+        var store = new ModelPreferencesStore(profile.Paths);
+        Directory.CreateDirectory(profile.Paths.StateDirectory);
+        File.WriteAllText(store.PreferencesFile, """
+            {
+              "schemaVersion": 1,
+              "plan": "Business",
+              "preferences": [
+                { "function": "Review", "family": "Claude", "model": "Claude Opus 5.5" }
+              ]
+            }
+            """);
+
+        var loaded = store.Load();
+
+        Assert.Equal(CopilotPlan.Business, loaded.Plan);
         Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Model == "Claude Opus 5.5");
     }
 

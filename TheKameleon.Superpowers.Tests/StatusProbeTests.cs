@@ -70,7 +70,7 @@ public sealed class StatusProbeTests : IDisposable
             new InstalledRelease("v1.0.0", "abc", "bundled"),
             new SkillArchiveReadResult(new[] { TestSupport.Skill("alpha") }, Array.Empty<string>()),
             overwriteEdited: false,
-            new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "gpt-5") } });
+            new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "gpt-5") } });
 
         Assert.DoesNotContain(Run(), check => check.Title == "Per-function agents");
 
