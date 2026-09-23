@@ -1,5 +1,6 @@
 using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 
 namespace TheKameleon.Superpowers.Skills.Setup;
 
@@ -36,7 +37,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             state.AgentFile is not null && agent.IsEdited(state.AgentFile));
     }
 
-    public SetupResult Install(InstalledRelease release, SkillArchiveReadResult source, bool overwriteEdited)
+    public SetupResult Install(InstalledRelease release, SkillArchiveReadResult source, bool overwriteEdited, ModelPreferences? modelPreferences = null)
     {
         using var _ = InstallLock.Acquire(LockTimeout);
         var load = store.Load();
@@ -45,10 +46,10 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Failed, new[] { CorruptMessage }, load.State);
         }
 
-        return InstallCore(load.State, release, source, overwriteEdited);
+        return InstallCore(load.State, release, source, overwriteEdited, modelPreferences ?? ModelPreferences.Empty);
     }
 
-    public SetupResult Repair(InstalledRelease release, SkillArchiveReadResult source)
+    public SetupResult Repair(InstalledRelease release, SkillArchiveReadResult source, ModelPreferences? modelPreferences = null)
     {
         using var _ = InstallLock.Acquire(LockTimeout);
         var load = store.Load();
@@ -66,7 +67,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             seed = seed with { AgentFile = new InstalledAgentFile(ContentHash.OfFile(paths.AgentFile), BootstrapText.Version) };
         }
 
-        return InstallCore(seed, release, source, overwriteEdited: false);
+        return InstallCore(seed, release, source, overwriteEdited: false, modelPreferences ?? ModelPreferences.Empty);
     }
 
     public SetupResult Remove()
@@ -79,6 +80,14 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
         }
 
         var messages = skills.Remove(load.State.Skills).Select(issue => issue.Message).ToList();
+        foreach (var functionAgentFile in load.State.FunctionAgentFiles)
+        {
+            if (agent.RemoveFunctionAgent(Enum.Parse<SuperpowersFunction>(functionAgentFile.Function), functionAgentFile).Status == AgentFileStatus.EditedNotRemoved)
+            {
+                messages.Add($"Your edited superpowers-{functionAgentFile.Function.ToLowerInvariant()}.agent.md was left in place.");
+            }
+        }
+
         if (agent.Remove(load.State.AgentFile).Status == AgentFileStatus.EditedNotRemoved)
         {
             messages.Add("Your edited superpowers.agent.md was left in place.");
@@ -133,7 +142,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
         return new SetupResult(SetupStatus.Succeeded, Array.Empty<string>(), state);
     }
 
-    private SetupResult InstallCore(InstallState seed, InstalledRelease release, SkillArchiveReadResult source, bool overwriteEdited)
+    private SetupResult InstallCore(InstallState seed, InstalledRelease release, SkillArchiveReadResult source, bool overwriteEdited, ModelPreferences modelPreferences)
     {
         var messages = source.Problems.ToList();
         var outcome = skills.Install(source.Skills, seed.Skills, overwriteEdited);
@@ -144,13 +153,37 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Failed, messages, seed);
         }
 
-        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited && seed.AgentFile is not null);
+        var generalModel = modelPreferences.Preferences.FirstOrDefault(p => p.Function == SuperpowersFunction.General)?.Model;
+        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited && seed.AgentFile is not null, generalModel);
         if (agentOutcome.Status == AgentFileStatus.EditedKept)
         {
             messages.Add("Your edited superpowers.agent.md was kept.");
         }
 
-        var state = seed with { Release = release, Skills = outcome.Installed, AgentFile = agentOutcome.Agent };
+        var knownFunctionFiles = seed.FunctionAgentFiles.ToDictionary(f => f.Function, StringComparer.Ordinal);
+        var functionAgentFiles = new List<InstalledFunctionAgentFile>();
+        foreach (var preference in modelPreferences.Preferences.Where(p => p.Function != SuperpowersFunction.General))
+        {
+            knownFunctionFiles.TryGetValue(preference.Function.ToString(), out var recorded);
+            var functionOutcome = agent.WriteFunctionAgent(preference.Function, preference.Model, recorded, overwriteEdited);
+            if (functionOutcome.Status == AgentFileStatus.EditedKept)
+            {
+                messages.Add($"Your edited superpowers-{preference.Function.ToString().ToLowerInvariant()}.agent.md was kept.");
+            }
+
+            if (functionOutcome.Agent is not null)
+            {
+                functionAgentFiles.Add(functionOutcome.Agent);
+            }
+        }
+
+        var state = seed with
+        {
+            Release = release,
+            Skills = outcome.Installed,
+            AgentFile = agentOutcome.Agent,
+            FunctionAgentFiles = functionAgentFiles,
+        };
         store.Save(state);
         return new SetupResult(messages.Count == 0 ? SetupStatus.Succeeded : SetupStatus.Partial, messages, state);
     }
