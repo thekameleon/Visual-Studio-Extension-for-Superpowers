@@ -4,6 +4,65 @@
     <Border Padding="12"
             Background="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
             TextElement.Foreground="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowTextBrushKey}}">
-        <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel IsEnabled="{Binding IsIdle}">
+                <TextBlock Text="Superpowers for GitHub Copilot" FontWeight="SemiBold" FontSize="16" />
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Release:" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding ReleaseVersions}"
+                              SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}"
+                              AutomationProperties.Name="Superpowers release" />
+                </Grid>
+
+                <WrapPanel Margin="0,8,0,0">
+                    <Button Command="{Binding InstallCommand}" Content="Install" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Install the selected Superpowers release" />
+                    <Button Command="{Binding RepairCommand}" Content="Repair" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Repair the Superpowers installation" />
+                    <Button Command="{Binding RemoveCommand}" Content="Remove from my profile" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Remove Superpowers from your profile" />
+                    <Button Command="{Binding ToggleAlwaysOnCommand}" Content="{Binding AlwaysOnButtonText}" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Toggle always-on Superpowers" />
+                </WrapPanel>
+
+                <TextBlock Text="{Binding InstalledText}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding StatusText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+                <Grid Margin="0,16,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="Refresh" Padding="12,2" AutomationProperties.Name="Refresh Superpowers status" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding Checks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="{Binding Level, Mode=OneWay}" FontWeight="SemiBold" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="Using Superpowers" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <ItemsControl ItemsSource="{Binding Tips}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
     </Border>
 </DataTemplate>

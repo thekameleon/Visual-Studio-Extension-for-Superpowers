@@ -6,9 +6,9 @@ using Microsoft.VisualStudio.Extensibility.Commands;
 namespace TheKameleon.Superpowers.Vsix
 {
     [VisualStudioContribution]
-    public sealed class PlanCommand : Command
+    public sealed class OpenSuperpowersCommand : Command
     {
-        public override CommandConfiguration CommandConfiguration => new("%Superpowers.PlanCommand.DisplayName%");
+        public override CommandConfiguration CommandConfiguration => new("%Superpowers.OpenCommand.DisplayName%");
 
         public override async Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)
         {

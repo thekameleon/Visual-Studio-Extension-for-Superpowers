@@ -12,7 +12,7 @@ namespace TheKameleon.Superpowers.Vsix
             Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
             Children =
             [
-                MenuChild.Command<PlanCommand>(),
+                MenuChild.Command<OpenSuperpowersCommand>(),
             ],
         };
 
@@ -24,7 +24,10 @@ namespace TheKameleon.Superpowers.Vsix
                 version: new System.Version(1, 0, GeneratedBuildVersion.Build, GeneratedBuildVersion.Revision),
                 publisherName: "TheKameleon",
                 displayName: "Superpowers for Visual Studio",
-                description: "Superpowers structured AI-assisted development workflows for Visual Studio."),
+                description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio 2026.")
+            {
+                InstallationTargetVersion = "[18.5,)",
+            },
         };
     }
 }

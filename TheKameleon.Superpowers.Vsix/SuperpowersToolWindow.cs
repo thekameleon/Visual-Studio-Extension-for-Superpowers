@@ -22,11 +22,17 @@ namespace TheKameleon.Superpowers.Vsix
             Placement = ToolWindowPlacement.DocumentWell,
         };
 
-        public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
+        public override async Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            this.control ??= new SuperpowersToolWindowControl(new SuperpowersViewModel());
-            return Task.FromResult<IRemoteUserControl>(this.control);
+            if (this.control is null)
+            {
+                var viewModel = new SuperpowersViewModel(this.Extensibility);
+                this.control = new SuperpowersToolWindowControl(viewModel);
+                await viewModel.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return this.control;
         }
 
         protected override void Dispose(bool disposing)

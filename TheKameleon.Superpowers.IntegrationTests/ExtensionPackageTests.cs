@@ -48,7 +48,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 (string?)candidate.Element(ManifestNamespace + "ProductArchitecture") == architecture);
 
             Assert.Equal("Microsoft.VisualStudio.Community", (string?)target.Attribute("Id"));
-            Assert.Equal("[17.14,)", (string?)target.Attribute("Version"));
+            Assert.Equal("[18.5,)", (string?)target.Attribute("Version"));
         }
 
         [Fact]

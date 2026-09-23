@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace TheKameleon.Superpowers.IntegrationTests
 {
-    public class PlanToolWindowPackageTests
+    public class ToolWindowPackageTests
     {
         [Fact]
         public void LocalizedPackageUsesNewFileVersionWithStableAssemblyIdentity()
@@ -37,7 +37,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
         }
 
         [Fact]
-        public void PackageRegistersPlanCommand()
+        public void PackageRegistersOpenCommand()
         {
             using var package = OpenPackage();
             using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
@@ -46,13 +46,13 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 .SelectMany(commandSet => commandSet.GetProperty("commands").EnumerateArray());
 
             var command = Assert.Single(commands, command =>
-                command.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.PlanCommand");
-            AssertLocalizedDisplayName(package, command, "Superpowers.PlanCommand.DisplayName", "Plan");
+                command.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand");
+            AssertLocalizedDisplayName(package, command, "Superpowers.OpenCommand.DisplayName", "Open");
             Assert.Equal("None", command.GetProperty("flags").GetString());
         }
 
         [Fact]
-        public void PlanCommandIsPlacedUnderSuperpowersInExtensionsMenu()
+        public void OpenCommandIsPlacedUnderSuperpowersInExtensionsMenu()
         {
             using var package = OpenPackage();
             using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
@@ -71,7 +71,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.Equal(24576, legacyParent.GetProperty("id").GetInt32());
 
             var commandPlacement = Assert.Single(placements, placement =>
-                placement.GetProperty("controlName").GetString() == "TheKameleon.Superpowers.Vsix.PlanCommand");
+                placement.GetProperty("controlName").GetString() == "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand");
             var groupName = commandPlacement.GetProperty("parent").GetProperty("parentName").GetString();
             var groupPlacement = Assert.Single(placements, placement =>
                 placement.GetProperty("controlName").GetString() == groupName);
@@ -93,6 +93,63 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 $"{service.GetProperty("name").GetString()};{service.GetProperty("version").GetString()}" == window.GetProperty("serviceMoniker").GetString());
             Assert.Equal("dotnetExtensibility", provider.GetProperty("host").GetString());
             Assert.False(provider.GetProperty("allowHostingInProcess").GetBoolean());
+        }
+
+        [Fact]
+        public void PackageRegistersOnlyTheOpenCommand()
+        {
+            using var package = OpenPackage();
+            using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
+            using var registration = JsonDocument.Parse(stream);
+            var names = registration.RootElement.GetProperty("commandSets").EnumerateArray()
+                .SelectMany(commandSet => commandSet.GetProperty("commands").EnumerateArray())
+                .Select(command => command.GetProperty("name").GetString())
+                .ToArray();
+
+            Assert.Equal(new[] { "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand" }, names);
+        }
+
+        [Fact]
+        public void PackageEmbedsInstallerViewWithAccessibleCommands()
+        {
+            var view = LoadEmbeddedToolWindowXaml();
+            XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+
+            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand" })
+            {
+                var button = Assert.Single(view.Descendants(presentation + "Button"), element =>
+                    (string?)element.Attribute("Command") == $"{{Binding {command}}}");
+                Assert.False(string.IsNullOrWhiteSpace((string?)button.Attribute("AutomationProperties.Name")),
+                    $"Button bound to {command} must expose an accessible name.");
+            }
+
+            var releasePicker = Assert.Single(view.Descendants(presentation + "ComboBox"));
+            Assert.Equal("{Binding ReleaseVersions}", (string?)releasePicker.Attribute("ItemsSource"));
+            Assert.False(string.IsNullOrWhiteSpace((string?)releasePicker.Attribute("AutomationProperties.Name")));
+            Assert.Single(view.Descendants(presentation + "ItemsControl"), element => (string?)element.Attribute("ItemsSource") == "{Binding Checks}");
+            Assert.Single(view.Descendants(presentation + "ItemsControl"), element => (string?)element.Attribute("ItemsSource") == "{Binding Tips}");
+        }
+
+        [Fact]
+        public void ViewModelDeclaresRemoteUiSerializationAttributes()
+        {
+            using var package = OpenPackage();
+            using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
+            using var assembly = new MemoryStream();
+            assemblyStream.CopyTo(assembly);
+            assembly.Position = 0;
+            using var peReader = new PEReader(assembly);
+            var metadata = peReader.GetMetadataReader();
+            var type = Assert.Single(metadata.TypeDefinitions.Select(metadata.GetTypeDefinition), candidate =>
+                metadata.GetString(candidate.Name) == "SuperpowersViewModel");
+
+            Assert.Contains(type.GetCustomAttributes(), attribute => GetAttributeTypeName(metadata, attribute) == "DataContractAttribute");
+            foreach (var propertyName in new[] { "StatusText", "InstalledText", "SelectedReleaseVersion", "AlwaysOnButtonText", "IsIdle", "Checks", "Tips" })
+            {
+                var property = Assert.Single(type.GetProperties().Select(metadata.GetPropertyDefinition), candidate =>
+                    metadata.GetString(candidate.Name) == propertyName);
+                Assert.Contains(property.GetCustomAttributes(), attribute => GetAttributeTypeName(metadata, attribute) == "DataMemberAttribute");
+            }
         }
 
         private static string? GetAttributeTypeName(MetadataReader metadata, CustomAttributeHandle handle)
