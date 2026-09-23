@@ -123,7 +123,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
                     $"Button bound to {command} must expose an accessible name.");
             }
 
-            var releasePicker = Assert.Single(view.Descendants(presentation + "ComboBox"));
+            var releasePicker = Assert.Single(view.Descendants(presentation + "ComboBox"), element => (string?)element.Attribute("ItemsSource") == "{Binding ReleaseVersions}");
             Assert.Equal("{Binding ReleaseVersions}", (string?)releasePicker.Attribute("ItemsSource"));
             Assert.False(string.IsNullOrWhiteSpace((string?)releasePicker.Attribute("AutomationProperties.Name")));
             Assert.Single(view.Descendants(presentation + "ItemsControl"), element => (string?)element.Attribute("ItemsSource") == "{Binding Checks}");
