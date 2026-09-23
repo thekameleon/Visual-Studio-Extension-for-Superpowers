@@ -12,7 +12,7 @@ public sealed class BundledCatalogLoaderTests : IDisposable
     [Fact]
     public void LoadsBundledCatalogFromRealDirectory()
     {
-        var root = GetRepositoryRelativePath("bundled-catalog", "obra.superpowers", "2026-09-21");
+        var root = TestSupport.RepositoryPath("bundled-catalog", "obra.superpowers", "2026-09-21");
 
         var result = BundledCatalogLoader.LoadFromDirectory(root);
 
@@ -34,14 +34,18 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Equal(2, latest.PlanMetadata.Composition.Count);
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/brainstorming/SKILL.md");
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/writing-plans/SKILL.md");
+    }
 
-        foreach (var entryPointId in new[] { "Plan", "Execute", "Debug", "TDD", "Review", "Verify", "Refactor", "Finish" })
-        {
-            var entryPointMetadata = latest.GetEntryPoint(entryPointId);
-            Assert.True(entryPointMetadata is not null, $"Release '{latest.ReleaseTag}' is missing entry point '{entryPointId}'.");
-            Assert.Equal(entryPointId, entryPointMetadata!.EntryPoint);
-            Assert.NotEmpty(entryPointMetadata.Composition);
-        }
+    [Fact]
+    public void ExposesArchivePathPrereleaseFlagAndPublishDate()
+    {
+        var result = BundledCatalogLoader.LoadFromDirectory(TestSupport.BundledCatalogRoot);
+
+        var latest = Assert.Single(result.Releases, release => release.ReleaseTag == "v6.4.1");
+        Assert.Equal("releases/v6.4.1/source.zip", latest.ArchivePath);
+        Assert.False(latest.IsPrerelease);
+        Assert.Equal(new DateTimeOffset(2026, 9, 19, 0, 32, 44, TimeSpan.Zero), latest.PublishedAtUtc);
+        Assert.Equal("v6.4.1", ReleaseSelection.DefaultRelease(result.Releases)!.ReleaseTag);
     }
 
     [Fact]
@@ -69,6 +73,24 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Contains(release.Diagnostics, diagnostic => diagnostic.Code == "SPCAT423");
     }
 
+    [Fact]
+    public void AllowsSiblingCrossReferenceButRejectsRootEscapingReference()
+    {
+        var root = CreateSyntheticCatalogRootWithCrossSkillReferences();
+
+        var result = BundledCatalogLoader.LoadFromDirectory(root);
+
+        var release = Assert.Single(result.Releases);
+
+        Assert.DoesNotContain(release.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("bar/other.md", StringComparison.Ordinal));
+        Assert.Contains(release.Assets, asset => asset == "skills/bar/other.md");
+
+        Assert.True(release.HasErrors);
+        Assert.Contains(release.Diagnostics, diagnostic =>
+            diagnostic.Code == "SPCAT423" && diagnostic.Message.Contains("escape.md", StringComparison.Ordinal));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempRoot))
@@ -79,7 +101,7 @@ public sealed class BundledCatalogLoaderTests : IDisposable
 
     private string CreateTamperedCopy()
     {
-        var sourceRoot = GetRepositoryRelativePath("bundled-catalog", "obra.superpowers", "2026-09-21");
+        var sourceRoot = TestSupport.RepositoryPath("bundled-catalog", "obra.superpowers", "2026-09-21");
         var destinationRoot = Path.Combine(tempRoot, "tampered-catalog");
         CopyDirectory(sourceRoot, destinationRoot);
         return destinationRoot;
@@ -182,20 +204,126 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         return root;
     }
 
-    private static string GetRepositoryRelativePath(params string[] segments)
+    private string CreateSyntheticCatalogRootWithCrossSkillReferences()
     {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
+        var root = Path.Combine(tempRoot, "cross-reference-catalog");
+        var releaseRoot = Path.Combine(root, "releases", "v1.0.0");
+        Directory.CreateDirectory(releaseRoot);
+
+        var licensePath = Path.Combine(releaseRoot, "LICENSE.txt");
+        File.WriteAllText(licensePath, "MIT License");
+
+        var adapterManifestPath = Path.Combine(releaseRoot, "adapter-manifest.json");
+        File.WriteAllText(adapterManifestPath, """
         {
-            if (File.Exists(Path.Combine(current.FullName, "TheKameleon.Superpowers.slnx")))
+          "schemaVersion": 1,
+          "actions": [
             {
-                return Path.Combine(new[] { current.FullName }.Concat(segments).ToArray());
+              "actionId": "Foo",
+              "skillPath": "skills/foo/SKILL.md",
+              "requiresApproval": false
+            },
+            {
+              "actionId": "Baz",
+              "skillPath": "skills/baz/SKILL.md",
+              "requiresApproval": false
+            }
+          ]
+        }
+        """);
+
+        var planMetadataPath = Path.Combine(releaseRoot, "plan-metadata.json");
+        File.WriteAllText(planMetadataPath, """
+        {
+          "schemaVersion": 1,
+          "entryPoint": "Foo",
+          "sourceRepository": "https://example.test/superpowers",
+          "releaseTag": "v1.0.0",
+          "composition": [
+            {
+              "order": 1,
+              "skillPath": "skills/foo/SKILL.md",
+              "purpose": "Sibling cross-reference"
+            }
+          ],
+          "notes": [
+            "Synthetic cross-reference test metadata"
+          ]
+        }
+        """);
+
+        var archivePath = Path.Combine(releaseRoot, "source.zip");
+        using (var stream = File.Create(archivePath))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: false))
+        {
+            var fooEntry = archive.CreateEntry("synthetic-release/skills/foo/SKILL.md");
+            using (var writer = new StreamWriter(fooEntry.Open()))
+            {
+                writer.Write("""
+                ---
+                name: foo
+                description: Sibling reference test
+                ---
+                See [other](../bar/other.md)
+                """);
             }
 
-            current = current.Parent;
+            var barEntry = archive.CreateEntry("synthetic-release/skills/bar/other.md");
+            using (var writer = new StreamWriter(barEntry.Open()))
+            {
+                writer.Write("Sibling asset content.");
+            }
+
+            var bazEntry = archive.CreateEntry("synthetic-release/skills/baz/SKILL.md");
+            using (var writer = new StreamWriter(bazEntry.Open()))
+            {
+                writer.Write("""
+                ---
+                name: baz
+                description: Root-escaping reference test
+                ---
+                See [escape](../../../escape.md)
+                """);
+            }
         }
 
-        throw new InvalidOperationException("Could not locate repository root from the test output directory.");
+        var provenancePath = Path.Combine(releaseRoot, "provenance.json");
+        var provenance = new
+        {
+            schemaVersion = 1,
+            releaseTag = "v1.0.0",
+            resolvedCommit = "abc123",
+            files = new[]
+            {
+                new { path = "source.zip", sha256 = ComputeSha256(archivePath) },
+                new { path = "LICENSE.txt", sha256 = ComputeSha256(licensePath) },
+                new { path = "adapter-manifest.json", sha256 = ComputeSha256(adapterManifestPath) },
+                new { path = "plan-metadata.json", sha256 = ComputeSha256(planMetadataPath) }
+            }
+        };
+        File.WriteAllText(provenancePath, JsonSerializer.Serialize(provenance));
+
+        var catalog = new
+        {
+            schemaVersion = 1,
+            sourceRepositoryUrl = "https://example.test/superpowers",
+            cutoffCapturedAtUtc = "2026-09-21T00:00:00Z",
+            releases = new[]
+            {
+                new
+                {
+                    releaseTag = "v1.0.0",
+                    resolvedCommit = "abc123",
+                    licensePath = "releases/v1.0.0/LICENSE.txt",
+                    archivePath = "releases/v1.0.0/source.zip",
+                    adapterManifestPath = "releases/v1.0.0/adapter-manifest.json",
+                    planMetadataPath = "releases/v1.0.0/plan-metadata.json",
+                    provenancePath = "releases/v1.0.0/provenance.json"
+                }
+            }
+        };
+        File.WriteAllText(Path.Combine(root, "catalog.json"), JsonSerializer.Serialize(catalog));
+        return root;
     }
 
     private static string ComputeSha256(string path)

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "entryPoint": "Plan",
+  "sourceRepository": "https://github.com/obra/superpowers",
+  "releaseTag": "v6.3.0",
+  "composition": [
+    {
+      "order": 1,
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "purpose": "Gather requirements and explore options before drafting."
+    },
+    {
+      "order": 2,
+      "skillPath": "skills/writing-plans/SKILL.md",
+      "purpose": "Produce the approved implementation plan once requirements are settled."
+    }
+  ],
+  "notes": [
+    "Plan is product metadata layered over unchanged upstream content.",
+    "This metadata does not rewrite upstream skill prose or authorize execution."
+  ]
+}

@@ -12,19 +12,7 @@ namespace TheKameleon.Superpowers.Vsix
             Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
             Children =
             [
-                MenuChild.Command<PlanCommand>(),
-                MenuChild.Command<ExecuteCommand>(),
-                MenuChild.Command<DebugCommand>(),
-                MenuChild.Command<ReviewCommand>(),
-                MenuChild.Command<VerifyCommand>(),
-                MenuChild.Command<TddCommand>(),
-                MenuChild.Command<RefactorCommand>(),
-                MenuChild.Command<FinishCommand>(),
-                MenuChild.Command<ContextProbeCommand>(),
-                MenuChild.Command<PublishDiagnosticProbeCommand>(),
-                MenuChild.Command<ClearDiagnosticProbeCommand>(),
-                MenuChild.Command<BuildProbeCommand>(),
-                MenuChild.Command<BridgeProbeCommand>(),
+                MenuChild.Command<OpenSuperpowersCommand>(),
             ],
         };
 
@@ -36,7 +24,12 @@ namespace TheKameleon.Superpowers.Vsix
                 version: new System.Version(1, 0, GeneratedBuildVersion.Build, GeneratedBuildVersion.Revision),
                 publisherName: "TheKameleon",
                 displayName: "Superpowers for Visual Studio",
-                description: "Superpowers structured AI-assisted development workflows for Visual Studio."),
+                description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio 2026.")
+            {
+                InstallationTargetVersion = "[18.5,)",
+                Icon = "Resources\\icon.png",
+                PreviewImage = "Resources\\preview.png",
+            },
         };
     }
 }

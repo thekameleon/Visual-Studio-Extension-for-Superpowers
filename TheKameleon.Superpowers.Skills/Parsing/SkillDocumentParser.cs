@@ -126,7 +126,7 @@ public static class SkillDocumentParser
             return false;
         }
 
-        if (path.Contains('\\', StringComparison.Ordinal))
+        if (path.Contains('\\'))
         {
             return false;
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -95,17 +96,7 @@ public static class BundledCatalogLoader
             ? new AdapterManifest(0, Array.Empty<AdapterManifestAction>(), diagnostics.Where(diagnostic => diagnostic.Code == "SPCAT412").ToArray())
             : AdapterManifestParser.Parse(adapterText);
 
-        var planMetadata = LoadEntryPointMetadata(source, releaseTag, release.PlanMetadataPath, diagnostics);
-
-        var entryPoints = new Dictionary<string, PlanEntryPointMetadata>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (entryPointId, metadataPath) in release.EntryPointMetadataPaths ?? new Dictionary<string, string>())
-        {
-            var entryPointMetadata = LoadEntryPointMetadata(source, releaseTag, metadataPath, diagnostics);
-            if (entryPointMetadata is not null)
-            {
-                entryPoints[entryPointId] = entryPointMetadata;
-            }
-        }
+        var planMetadata = LoadPlanMetadata(source, releaseTag, release.PlanMetadataPath, diagnostics);
 
         var provenanceText = ReadRequiredText(source, release.ProvenancePath, diagnostics, "SPCAT413", $"Release '{releaseTag}' is missing its provenance metadata.", MaxProvenanceLength);
         ProvenanceModel? provenance = null;
@@ -142,6 +133,14 @@ public static class BundledCatalogLoader
             ValidateManifestSkillsAndDependencies(releaseTag, adapterManifest, archiveEntries, diagnostics, skills, assets);
         }
 
+        DateTimeOffset? publishedAtUtc = DateTimeOffset.TryParse(
+            release.PublishedAtUtc,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var published)
+            ? published
+            : null;
+
         return new LoadedCatalogRelease(
             releaseTag,
             provenance.ResolvedCommit ?? release.ResolvedCommit ?? string.Empty,
@@ -150,11 +149,15 @@ public static class BundledCatalogLoader
             planMetadata,
             skills,
             assets.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
-            diagnostics,
-            entryPoints);
+            diagnostics)
+        {
+            ArchivePath = release.ArchivePath ?? string.Empty,
+            IsPrerelease = release.Prerelease,
+            PublishedAtUtc = publishedAtUtc,
+        };
     }
 
-    private static PlanEntryPointMetadata? LoadEntryPointMetadata(
+    private static PlanEntryPointMetadata? LoadPlanMetadata(
         ICatalogSource source,
         string releaseTag,
         string? planMetadataPath,
@@ -598,7 +601,9 @@ public static class BundledCatalogLoader
 
         public string? ProvenancePath { get; init; }
 
-        public Dictionary<string, string>? EntryPointMetadataPaths { get; init; }
+        public bool Prerelease { get; init; }
+
+        public string? PublishedAtUtc { get; init; }
     }
 
     private sealed class PlanMetadataModel

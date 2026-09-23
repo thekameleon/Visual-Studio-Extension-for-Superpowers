@@ -35,27 +35,6 @@ public sealed class SkillDocumentParserTests
     }
 
     [Fact]
-    public void AllowsSiblingSkillDirectoryReference()
-    {
-        // Upstream cross-skill references such as executing-plans -> ../requesting-code-review/code-reviewer.md
-        // must remain supported. True path-escape containment is enforced later, at archive-relative
-        // resolution, where the escaped path can be checked against the release root.
-        const string content = """
-        ---
-        name: Plan
-        description: Create a plan.
-        ---
-        Use [reference](../requesting-code-review/code-reviewer.md).
-        """;
-
-        var result = SkillDocumentParser.Parse(content);
-
-        Assert.False(result.HasErrors);
-        Assert.Single(result.References);
-        Assert.Equal("../requesting-code-review/code-reviewer.md", result.References[0].RelativePath);
-    }
-
-    [Fact]
     public void RejectsUnsafeReference()
     {
         const string content = """
@@ -63,7 +42,7 @@ public sealed class SkillDocumentParserTests
         name: Plan
         description: Create a plan.
         ---
-        Use [reference](C:\outside.md).
+        Use [reference](..\outside.md).
         """;
 
         var result = SkillDocumentParser.Parse(content);
@@ -81,5 +60,25 @@ public sealed class SkillDocumentParserTests
 
         Assert.True(result.HasErrors);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT001");
+    }
+
+    [Fact]
+    public void AcceptsSiblingSkillCrossReference()
+    {
+        var document = SkillDocumentParser.Parse(
+            "---\nname: executing-plans\ndescription: x\n---\nSee [code review](../requesting-code-review/code-reviewer.md).\n");
+
+        Assert.Empty(document.Diagnostics);
+        Assert.Contains(document.References, reference => reference.RelativePath == "../requesting-code-review/code-reviewer.md");
+    }
+
+    [Fact]
+    public void StillRejectsAbsoluteAndRootedAndBackslashReferences()
+    {
+        foreach (var path in new[] { "https://example.com/x.md", "/etc/passwd", "..\\evil.md" })
+        {
+            var document = SkillDocumentParser.Parse($"---\nname: x\ndescription: x\n---\n[ref]({path})\n");
+            Assert.Contains(document.Diagnostics, diagnostic => diagnostic.Code == "SPCAT007");
+        }
     }
 }

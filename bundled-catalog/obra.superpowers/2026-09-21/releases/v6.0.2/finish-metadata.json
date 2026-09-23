@@ -1,0 +1,21 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "Finish",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v6.0.2",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/finishing-a-development-branch/SKILL.md",
+                            "purpose":  "Show readiness and explicit next actions for finishing the branch."
+                        },
+                        {
+                            "order":  2,
+                            "skillPath":  "skills/verification-before-completion/SKILL.md",
+                            "purpose":  "Verify completion before reporting the branch as ready."
+                        }
+                    ],
+    "notes":  [
+                  "Finish reports readiness truthfully; it never automatically commits, merges, pushes, removes worktrees or deletes branches."
+              ]
+}

@@ -1,122 +1,73 @@
 <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-              xmlns:colors="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0">
+              xmlns:colors="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+              xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml">
     <Border Padding="12"
             Background="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
             TextElement.Foreground="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowTextBrushKey}}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel>
-                <TextBlock Text="{Binding EntryPointId, StringFormat='Superpowers {0} workflow'}"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel IsEnabled="{Binding IsIdle}">
+                <StackPanel Orientation="Horizontal">
+                    <vs:Image Source="Superpowers" Width="32" Height="32" Margin="0,0,8,0" AutomationProperties.Name="Superpowers" />
+                    <TextBlock Text="Superpowers for GitHub Copilot" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Margin="0,6,0,0" />
 
-                <Grid Margin="0,8,0,0">
+                <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Version:" Margin="0,0,8,4" VerticalAlignment="Center" />
-                    <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,4"
+                    <TextBlock Grid.Column="0" Text="Release:" Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1"
                               ItemsSource="{Binding ReleaseVersions}"
-                              SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}" />
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Skill:" Margin="0,0,8,4" VerticalAlignment="Center" />
-                    <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,4"
-                              ItemsSource="{Binding SkillNames}"
-                              SelectedItem="{Binding SelectedSkillName, Mode=TwoWay}" />
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Mode:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox Grid.Row="2" Grid.Column="1"
-                              ItemsSource="{Binding ExecutionModes}"
-                              SelectedItem="{Binding SelectedExecutionMode, Mode=TwoWay}" />
+                              SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}"
+                              AutomationProperties.Name="Superpowers release" />
                 </Grid>
 
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="Start" Margin="0,0,8,0" Command="{Binding StartCommand}" />
-                    <Button Content="Next" Margin="0,0,8,0" Command="{Binding NextCommand}" />
-                    <Button Content="Pause" Margin="0,0,8,0" Command="{Binding PauseCommand}" />
-                    <Button Content="Cancel" Margin="0,0,8,0" Command="{Binding CancelCommand}" />
-                    <Button Content="Copy prompt" Command="{Binding CopyPromptCommand}" />
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Command="{Binding CheckForUpdatesCommand}" Content="Check for newer releases" Padding="12,2" Margin="0,0,8,0" AutomationProperties.Name="Check GitHub for newer Superpowers releases" />
+                    <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" Content="Include prereleases" VerticalAlignment="Center" AutomationProperties.Name="Include prerelease versions" />
                 </StackPanel>
 
-                <TextBlock Text="{Binding RunStateText}"
-                           Margin="0,8,0,0"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap" />
-                <TextBlock Text="{Binding StatusText}"
-                           Margin="0,4,0,0"
-                           TextWrapping="Wrap" />
+                <WrapPanel Margin="0,8,0,0">
+                    <Button Command="{Binding InstallCommand}" Content="Install" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Install the selected Superpowers release" />
+                    <Button Command="{Binding RepairCommand}" Content="Repair" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Repair the Superpowers installation" />
+                    <Button Command="{Binding RemoveCommand}" Content="Remove from my profile" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Remove Superpowers from your profile" />
+                    <Button Command="{Binding ToggleAlwaysOnCommand}" Content="{Binding AlwaysOnButtonText}" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Toggle always-on Superpowers" />
+                </WrapPanel>
 
-                <TextBlock Text="Prompt preview (editable, copy before sending to Copilot Chat)"
-                           Margin="0,8,0,4"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap" />
-                <TextBox Text="{Binding PromptText, Mode=TwoWay}"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         FontFamily="Consolas"
-                         MinHeight="160"
-                         VerticalScrollBarVisibility="Auto" />
+                <TextBlock Text="{Binding InstalledText}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding StatusText}" Margin="0,4,0,0" TextWrapping="Wrap" />
 
-                <TextBlock Text="{Binding EntryPointId, StringFormat='{}{0} composition (upstream skill sequence)'}"
-                           Margin="0,8,0,4"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap" />
-                <TextBlock Text="{Binding HandoffStatusText}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,4" />
-                <ItemsControl ItemsSource="{Binding ComposedSteps}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,2" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button Content="Accept design" Margin="0,4,0,0" HorizontalAlignment="Left"
-                        Command="{Binding AcceptDesignCommand}"
-                        AutomationProperties.Name="Accept the composed Plan design and advance to the next step" />
-                <ItemsControl ItemsSource="{Binding AcceptedTasks}" Margin="0,4,0,0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,2" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <TextBlock Text="History"
-                           Margin="0,8,0,4"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap" />
-                <Grid Margin="0,0,0,4">
+                <Grid Margin="0,16,0,4">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Search:" Margin="0,0,8,0" VerticalAlignment="Center"
-                               AutomationProperties.LabeledBy="{Binding ElementName=HistorySearchBox}" />
-                    <TextBox x:Name="HistorySearchBox" Grid.Column="1"
-                             Text="{Binding HistorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             AutomationProperties.Name="Search execution history by run id or state" />
+                    <TextBlock Grid.Column="0" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="Refresh" Padding="12,2" AutomationProperties.Name="Refresh Superpowers status" />
                 </Grid>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <Button Content="Refresh" Margin="0,0,8,0" Command="{Binding RefreshHistoryCommand}"
-                            AutomationProperties.Name="Refresh execution history" />
-                    <Button Content="Export" Margin="0,0,8,0" Command="{Binding ExportHistoryCommand}"
-                            AutomationProperties.Name="Export filtered execution history" />
-                    <Button Content="Delete filtered" Command="{Binding DeleteHistoryCommand}"
-                            AutomationProperties.Name="Delete filtered execution history entries" />
-                </StackPanel>
-                <ItemsControl ItemsSource="{Binding HistoryEntries}">
+                <ItemsControl ItemsSource="{Binding Checks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,2" />
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="{Binding Level, Mode=OneWay}" FontWeight="SemiBold" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="Using Superpowers" FontWeight="SemiBold" Margin="0,16,0,4" />
+                <ItemsControl ItemsSource="{Binding Tips}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2,0,0" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -124,4 +75,3 @@
         </ScrollViewer>
     </Border>
 </DataTemplate>
-

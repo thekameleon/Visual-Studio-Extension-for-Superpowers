@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "Debug",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v5.0.5",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/systematic-debugging/SKILL.md",
+                            "purpose":  "Attach diagnostics and scoped context, and retain diagnosis before any fix is applied."
+                        }
+                    ],
+    "notes":  [
+                  "Debug requires diagnosis evidence before permitted fixes, per systematic-debugging."
+              ]
+}

@@ -1,0 +1,75 @@
+﻿{
+    "schemaVersion":  1,
+    "actions":  [
+                    {
+                        "actionId":  "plan-brainstorm",
+                        "skillPath":  "skills/brainstorming/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "plan-write",
+                        "skillPath":  "skills/writing-plans/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "execute-plan",
+                        "skillPath":  "skills/executing-plans/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "debug-investigate",
+                        "skillPath":  "skills/systematic-debugging/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "tdd-cycle",
+                        "skillPath":  "skills/test-driven-development/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "review-request-1",
+                        "skillPath":  "skills/requesting-code-review/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "review-request-2",
+                        "skillPath":  "skills/receiving-code-review/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "verify-completion",
+                        "skillPath":  "skills/verification-before-completion/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "refactor-composition-1",
+                        "skillPath":  "skills/writing-plans/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "refactor-composition-2",
+                        "skillPath":  "skills/test-driven-development/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "refactor-composition-3",
+                        "skillPath":  "skills/requesting-code-review/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "refactor-composition-4",
+                        "skillPath":  "skills/verification-before-completion/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "finish-branch-1",
+                        "skillPath":  "skills/finishing-a-development-branch/SKILL.md",
+                        "requiresApproval":  false
+                    },
+                    {
+                        "actionId":  "finish-branch-2",
+                        "skillPath":  "skills/verification-before-completion/SKILL.md",
+                        "requiresApproval":  false
+                    }
+                ]
+}

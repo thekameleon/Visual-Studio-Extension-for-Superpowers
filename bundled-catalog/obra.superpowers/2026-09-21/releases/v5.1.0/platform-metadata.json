@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "product": "SuperPowers for Visual Studio",
+  "menuLabel": "Superpowers",
+  "hostModel": "VisualStudio.Extensibility",
+  "supportedIdeVersions": [
+    "17.14+",
+    "18.x"
+  ],
+  "defaultExecutionMode": "Guided",
+  "supportedExecutionModes": [
+    "Guided",
+    "ApprovalRequired",
+    "Full"
+  ],
+  "compatibility": {
+    "adapterStatus": "SupportedByMetadata",
+    "testStatus": "UntestedPerRelease",
+    "distribution": "Bundled"
+  }
+}

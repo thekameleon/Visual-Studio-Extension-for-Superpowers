@@ -13,7 +13,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>
@@ -29,16 +28,6 @@
   <ItemGroup>
     <ProjectReference Include="..\TheKameleon.Superpowers.Core\TheKameleon.Superpowers.Core.csproj" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
-    <ProjectReference Include="..\TheKameleon.Superpowers.Bridge.Contracts\TheKameleon.Superpowers.Bridge.Contracts.csproj" />
-    <Compile Include="..\TheKameleon.Superpowers.InProcess\BridgeCapabilityCatalog.cs" Link="Bridge\BridgeCapabilityCatalog.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.InProcess\SemanticTargetResolver.cs" Link="Bridge\SemanticTargetResolver.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.InProcess\SelectionIdentity.cs" Link="Bridge\SelectionIdentity.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.InProcess\DocumentCompilerDiagnostics.cs" Link="Bridge\DocumentCompilerDiagnostics.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\IBridgeClient.cs" Link="Vsix\Bridge\IBridgeClient.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\UnavailableBridgeClient.cs" Link="Vsix\Bridge\UnavailableBridgeClient.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\PipeBridgeClient.cs" Link="Vsix\Bridge\PipeBridgeClient.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\ICopilotBridge.cs" Link="Vsix\Bridge\ICopilotBridge.cs" />
-    <Compile Include="..\TheKameleon.Superpowers.Vsix\Bridge\UnsupportedCopilotBridge.cs" Link="Vsix\Bridge\UnsupportedCopilotBridge.cs" />
   </ItemGroup>
 
 </Project>

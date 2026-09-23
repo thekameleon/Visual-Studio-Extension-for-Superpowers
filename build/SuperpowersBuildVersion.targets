@@ -2,7 +2,7 @@
   <PropertyGroup>
 	<DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
 	<SuperpowersBuildStateDirectory Condition="'$(SuperpowersBuildStateDirectory)' == ''">$(MSBuildThisFileDirectory)..\.superpowers-build</SuperpowersBuildStateDirectory>
-	<SuperpowersBridgeVersionFile Condition="'$(SuperpowersBridgeVersionFile)' == ''">$(MSBuildThisFileDirectory)..\TheKameleon.Superpowers.InProcess\obj\$(Configuration)\superpowers-build-version.txt</SuperpowersBridgeVersionFile>
+	<SuperpowersBuildVersionFile Condition="'$(SuperpowersBuildVersionFile)' == ''">$(MSBuildProjectDirectory)\obj\$(Configuration)\superpowers-build-version.txt</SuperpowersBuildVersionFile>
   </PropertyGroup>
   <ItemGroup>
 	<Compile Include="$(MSBuildThisFileDirectory)BuildIdentity.cs" Link="BuildIdentity.cs" />
@@ -64,11 +64,11 @@
 									Condition="'$(SuperpowersBuildRole)' == 'Owner'">
 	  <Output TaskParameter="BuildVersion" PropertyName="SuperpowersBuildVersion" />
 	</AllocateSuperpowersBuildVersion>
-	<WriteLinesToFile File="$(SuperpowersBridgeVersionFile)" Lines="$(SuperpowersBuildVersion)" Overwrite="true"
+	<WriteLinesToFile File="$(SuperpowersBuildVersionFile)" Lines="$(SuperpowersBuildVersion)" Overwrite="true"
 					  Condition="'$(SuperpowersBuildRole)' == 'Owner'" />
-	<Error Condition="'$(SuperpowersBuildRole)' == 'Consumer' And !Exists('$(SuperpowersBridgeVersionFile)')"
-		   Text="Build the bridge dependency before building the modern extension; its shared build version is missing." />
-	<ReadLinesFromFile File="$(SuperpowersBridgeVersionFile)" Condition="'$(SuperpowersBuildRole)' == 'Consumer'">
+	<Error Condition="'$(SuperpowersBuildRole)' == 'Consumer' And !Exists('$(SuperpowersBuildVersionFile)')"
+		   Text="Build the version owner before this project; the shared build version is missing." />
+	<ReadLinesFromFile File="$(SuperpowersBuildVersionFile)" Condition="'$(SuperpowersBuildRole)' == 'Consumer'">
 	  <Output TaskParameter="Lines" PropertyName="SuperpowersBuildVersion" />
 	</ReadLinesFromFile>
 	<Error Condition="'$(SuperpowersBuildVersion)' == ''" Text="A shared Superpowers build version is required." />
@@ -81,7 +81,7 @@
 	<Message Importance="High" Text="Superpowers build identity: $(MSBuildProjectName) $(SuperpowersBuildVersion) (assembly binding $(AssemblyVersion))." />
   </Target>
 	<Target Name="GenerateSuperpowersMetadataVersion" BeforeTargets="CoreCompile"
-		  Condition="'$(SuperpowersBuildRole)' == 'Consumer'">
+		  Condition="'$(SuperpowersBuildRole)' != ''">
 	<PropertyGroup>
 	  <_SuperpowersMetadataVersion>$(SuperpowersBuildVersion)</_SuperpowersMetadataVersion>
 	  <_SuperpowersMetadataVersion Condition="'$(_SuperpowersMetadataVersion)' == ''">1.0.1.0</_SuperpowersMetadataVersion>
@@ -96,14 +96,5 @@
 	  <Compile Include="$(_SuperpowersMetadataSource)" />
 	  <FileWrites Include="$(_SuperpowersMetadataSource)" />
 	</ItemGroup>
-  </Target>
-  <Target Name="StampSuperpowersBridgeManifest" AfterTargets="DetokenizeVsixManifestFile"
-		  Condition="'$(DesignTimeBuild)' != 'true' And '$(SuperpowersBuildRole)' == 'Owner'">
-	<ReadLinesFromFile File="$(SuperpowersBridgeVersionFile)">
-	  <Output TaskParameter="Lines" PropertyName="_SuperpowersManifestVersion" />
-	</ReadLinesFromFile>
-	<XmlPoke XmlInputPath="$(IntermediateVsixManifest)"
-			 Query="/*[local-name()='PackageManifest']/*[local-name()='Metadata']/*[local-name()='Identity']/@Version"
-			 Value="$(_SuperpowersManifestVersion)" />
   </Target>
 </Project>

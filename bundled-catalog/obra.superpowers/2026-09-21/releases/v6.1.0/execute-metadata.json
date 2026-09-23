@@ -1,0 +1,17 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "Execute",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v6.1.0",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/executing-plans/SKILL.md",
+                            "purpose":  "Load the accepted plan and track task/evidence state while executing it."
+                        }
+                    ],
+    "notes":  [
+                  "Execute loads an accepted plan and tracks task/evidence state; it does not fabricate subagent dispatch.",
+                  "subagent-driven-development is an optional, separately capability-gated composition and is not included by default."
+              ]
+}

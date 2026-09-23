@@ -8,18 +8,13 @@ namespace TheKameleon.Superpowers.IntegrationTests;
 public sealed class BuildIdentityPackageTests
 {
     [Fact]
-    public void BothPackagesAndTheirDllsShareOneBuildVersion()
+    public void PackageAndDllShareOneBuildVersion()
     {
-        var bridge = ReadIdentity("TheKameleon.Superpowers.InProcess");
         var modern = ReadIdentity("TheKameleon.Superpowers.Vsix");
 
-        Assert.Equal(bridge.PackageVersion, modern.PackageVersion);
-        Assert.Equal(bridge.PackageVersion, bridge.FileVersion);
         Assert.Equal(modern.PackageVersion, modern.FileVersion);
-        Assert.Equal(bridge.FileVersion, bridge.InformationalVersion);
         Assert.Equal(modern.FileVersion, modern.InformationalVersion);
-        Assert.True(Version.Parse(bridge.PackageVersion).Revision > 0);
-        Assert.Equal(new Version(1, 0, 0, 0), bridge.AssemblyVersion);
+        Assert.True(Version.Parse(modern.PackageVersion).Revision > 0);
         Assert.Equal(new Version(1, 0, 1, 0), modern.AssemblyVersion);
     }
 

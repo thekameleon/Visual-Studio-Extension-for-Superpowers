@@ -48,7 +48,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 (string?)candidate.Element(ManifestNamespace + "ProductArchitecture") == architecture);
 
             Assert.Equal("Microsoft.VisualStudio.Community", (string?)target.Attribute("Id"));
-            Assert.Equal("[17.14,)", (string?)target.Attribute("Version"));
+            Assert.Equal("[18.5,)", (string?)target.Attribute("Version"));
         }
 
         [Fact]
@@ -95,11 +95,27 @@ namespace TheKameleon.Superpowers.IntegrationTests
         }
 
         [Fact]
-        public void BuildDependencyDoesNotBundleBridgeRuntime()
+        public void ManifestDeclaresIconAndPreviewImageThatArePackaged()
         {
-            using var package = OpenPackage();
-            Assert.DoesNotContain(package.Entries, entry =>
-                entry.FullName.Contains("TheKameleon.Superpowers.InProcess", StringComparison.OrdinalIgnoreCase));
+            using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, PackageName));
+            var manifest = ReadManifest(package);
+            var metadata = Assert.Single(manifest.Descendants(ManifestNamespace + "Metadata"));
+
+            foreach (var element in new[] { "Icon", "PreviewImage" })
+            {
+                var path = (string?)metadata.Element(ManifestNamespace + element);
+                Assert.False(string.IsNullOrWhiteSpace(path), $"Manifest must declare <{element}>.");
+                Assert.NotNull(package.GetEntry(path!.Replace('\\', '/')));
+            }
+        }
+
+        [Fact]
+        public void PackageContainsCommandIconImages()
+        {
+            using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, PackageName));
+
+            Assert.Contains(package.Entries, entry => entry.FullName.EndsWith("Superpowers.16.16.png", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(package.Entries, entry => entry.FullName.EndsWith("Superpowers.20.20.png", StringComparison.OrdinalIgnoreCase));
         }
 
         private static ZipArchive OpenPackage()

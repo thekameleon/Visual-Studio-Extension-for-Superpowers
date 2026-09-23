@@ -1,9 +1,5 @@
 <Solution>
-  <Project Path="TheKameleon.Superpowers.Bridge.Contracts/TheKameleon.Superpowers.Bridge.Contracts.csproj" />
   <Project Path="TheKameleon.Superpowers.Core/TheKameleon.Superpowers.Core.csproj" />
-  <Project Path="TheKameleon.Superpowers.InProcess/TheKameleon.Superpowers.InProcess.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
   <Project Path="TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj" />
   <Project Path="TheKameleon.Superpowers.Skills/TheKameleon.Superpowers.Skills.csproj" />
   <Project Path="TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj" />
