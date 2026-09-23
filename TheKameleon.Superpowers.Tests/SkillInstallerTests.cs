@@ -129,6 +129,21 @@ public sealed class SkillInstallerTests : IDisposable
     }
 
     [Fact]
+    public void RemoveOrphanFailureDuringInstallDoesNotThrowUnhandled()
+    {
+        var first = Installer.Install(new[] { TestSupport.Skill("alpha"), TestSupport.Skill("beta") }, Array.Empty<InstalledSkill>(), false);
+
+        SkillInstallOutcome outcome;
+        using (new FileStream(SkillFile("beta"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            outcome = Installer.Install(new[] { TestSupport.Skill("alpha") }, first.Installed, false);
+        }
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal(SkillIssueKind.RemovalFailed, Assert.Single(outcome.Issues).Kind);
+    }
+
+    [Fact]
     public void RemoveDeletesUneditedAndReportsEdited()
     {
         var first = Installer.Install(new[] { TestSupport.Skill("alpha"), TestSupport.Skill("beta") }, Array.Empty<InstalledSkill>(), false);

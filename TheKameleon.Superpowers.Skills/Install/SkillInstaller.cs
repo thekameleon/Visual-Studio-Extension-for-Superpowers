@@ -7,6 +7,7 @@ public enum SkillIssueKind
     EditedKept,
     EditedOverwritten,
     RemovedEditedKept,
+    RemovalFailed,
 }
 
 public sealed record SkillIssue(string SkillName, SkillIssueKind Kind, string Message);
@@ -144,13 +145,20 @@ public sealed class SkillInstaller(ProfilePaths paths)
                 continue;
             }
 
-            if (IsEdited(skill))
+            try
             {
-                issues.Add(new SkillIssue(skill.Name, SkillIssueKind.RemovedEditedKept, $"Your edited '{skill.Name}' skill was left in place and is no longer managed by Superpowers."));
-                continue;
-            }
+                if (IsEdited(skill))
+                {
+                    issues.Add(new SkillIssue(skill.Name, SkillIssueKind.RemovedEditedKept, $"Your edited '{skill.Name}' skill was left in place and is no longer managed by Superpowers."));
+                    continue;
+                }
 
-            Directory.Delete(directory, recursive: true);
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                issues.Add(new SkillIssue(skill.Name, SkillIssueKind.RemovalFailed, $"Removing '{skill.Name}' failed and it was left in place: {exception.Message}"));
+            }
         }
 
         return issues;
