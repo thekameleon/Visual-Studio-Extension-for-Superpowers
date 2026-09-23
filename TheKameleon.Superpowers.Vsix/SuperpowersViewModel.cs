@@ -24,14 +24,23 @@ namespace TheKameleon.Superpowers.Vsix
     {
         private readonly Func<SuperpowersFunction, string?>? suggestModel;
         private readonly Func<string, string?>? lookupProvider;
+        private readonly Func<SuperpowersFunction, ModelPreferenceRow, bool>? isFunctionAvailable;
+        private readonly Action<SuperpowersFunction>? reportFunctionConflict;
         private SuperpowersFunction function;
         private string model = string.Empty;
         private string? lastSuggestion;
 
-        public ModelPreferenceRow(SuperpowersFunction function, Func<SuperpowersFunction, string?>? suggestModel = null, Func<string, string?>? lookupProvider = null)
+        public ModelPreferenceRow(
+            SuperpowersFunction function,
+            Func<SuperpowersFunction, string?>? suggestModel = null,
+            Func<string, string?>? lookupProvider = null,
+            Func<SuperpowersFunction, ModelPreferenceRow, bool>? isFunctionAvailable = null,
+            Action<SuperpowersFunction>? reportFunctionConflict = null)
         {
             this.suggestModel = suggestModel;
             this.lookupProvider = lookupProvider;
+            this.isFunctionAvailable = isFunctionAvailable;
+            this.reportFunctionConflict = reportFunctionConflict;
             this.function = function;
             this.model = suggestModel?.Invoke(function) ?? string.Empty;
             this.lastSuggestion = string.IsNullOrEmpty(this.model) ? null : this.model;
@@ -43,15 +52,31 @@ namespace TheKameleon.Superpowers.Vsix
             get => this.function;
             set
             {
-                if (this.SetProperty(ref this.function, value))
+                if (EqualityComparer<SuperpowersFunction>.Default.Equals(this.function, value))
                 {
-                    this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
-                    if (string.IsNullOrWhiteSpace(this.model) || this.model == this.lastSuggestion)
-                    {
-                        var suggestion = this.suggestModel?.Invoke(value);
-                        this.Model = suggestion ?? this.model;
-                        this.lastSuggestion = string.IsNullOrEmpty(suggestion) ? null : suggestion;
-                    }
+                    return;
+                }
+
+                if (this.isFunctionAvailable is not null && !this.isFunctionAvailable(value, this))
+                {
+                    this.reportFunctionConflict?.Invoke(value);
+                    // WPF's ComboBox shows the clicked item as selected immediately, regardless of
+                    // whether the bound setter accepts it. Since we're declining without changing
+                    // the backing field, we still have to raise PropertyChanged for Function so the
+                    // binding re-pulls the (unchanged) value from the getter and the ComboBox's
+                    // visible selection snaps back to what it actually is.
+                    this.RaiseNotifyPropertyChangedEvent(nameof(this.Function));
+                    return;
+                }
+
+                this.function = value;
+                this.RaiseNotifyPropertyChangedEvent(nameof(this.Function));
+                this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
+                if (string.IsNullOrWhiteSpace(this.model) || this.model == this.lastSuggestion)
+                {
+                    var suggestion = this.suggestModel?.Invoke(value);
+                    this.Model = suggestion ?? this.model;
+                    this.lastSuggestion = string.IsNullOrEmpty(suggestion) ? null : suggestion;
                 }
             }
         }
@@ -128,7 +153,18 @@ namespace TheKameleon.Superpowers.Vsix
             this.ToggleAlwaysOnCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.ToggleAlwaysOnAsync, cancellationToken));
             this.CheckForUpdatesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.CheckForUpdatesAsync, cancellationToken));
             this.RefreshModelCatalogCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshModelCatalogAsync, cancellationToken));
-            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General, this.SuggestModel, this.LookupProvider)); return Task.CompletedTask; });
+            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) =>
+            {
+                var nextFunction = this.NextAvailableFunction();
+                if (nextFunction is null)
+                {
+                    this.StatusText = "Every function already has a model preference row.";
+                    return Task.CompletedTask;
+                }
+
+                this.FunctionRows.Add(new ModelPreferenceRow(nextFunction.Value, this.SuggestModel, this.LookupProvider, this.IsFunctionAvailable, this.ReportFunctionConflict));
+                return Task.CompletedTask;
+            });
             this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
             this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
         }
@@ -317,7 +353,12 @@ namespace TheKameleon.Superpowers.Vsix
 
             this.SelectedPlan = savedPreferences.Plan;
             this.FunctionRows.Clear();
-            this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function, lookupProvider: this.LookupProvider) { Model = p.Model }));
+            this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(
+                p.Function,
+                lookupProvider: this.LookupProvider,
+                isFunctionAvailable: this.IsFunctionAvailable,
+                reportFunctionConflict: this.ReportFunctionConflict)
+            { Model = p.Model }));
         }
 
         private async Task InstallAsync(CancellationToken cancellationToken)
@@ -502,6 +543,26 @@ namespace TheKameleon.Superpowers.Vsix
 
         private string? LookupProvider(string modelName) =>
             this.modelCatalog?.Models.FirstOrDefault(model => string.Equals(model.Name, modelName, StringComparison.OrdinalIgnoreCase))?.Provider;
+
+        private bool IsFunctionAvailable(SuperpowersFunction function, ModelPreferenceRow row) =>
+            !this.FunctionRows.Any(other => !ReferenceEquals(other, row) && other.Function == function);
+
+        private void ReportFunctionConflict(SuperpowersFunction function) =>
+            this.StatusText = $"{function} already has a model preference row. Remove or change that row first.";
+
+        private SuperpowersFunction? NextAvailableFunction()
+        {
+            var used = this.FunctionRows.Select(row => row.Function).ToHashSet();
+            foreach (var candidate in Enum.GetValues<SuperpowersFunction>())
+            {
+                if (!used.Contains(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
 
         private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
         {
