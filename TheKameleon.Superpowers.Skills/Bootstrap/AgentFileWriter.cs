@@ -22,9 +22,11 @@ public sealed class AgentFileWriter(ProfilePaths paths)
 {
     private const string Description = "Agent mode with Superpowers skills — brainstorming, planning, TDD, systematic debugging, code review and verification.";
 
-    public static string BuildContent(string? model = null)
+    public static string BuildContent(SuperpowersFunction function, string? model = null)
     {
-        var frontMatter = "---\nname: Superpowers\ndescription: " + Description;
+        var name = function == SuperpowersFunction.General ? "Superpowers" : $"Superpowers ({function})";
+        var description = function == SuperpowersFunction.General ? Description : $"{Description} Configured for the {function} step.";
+        var frontMatter = "---\nname: " + name + "\ndescription: " + description;
         if (!string.IsNullOrWhiteSpace(model))
         {
             frontMatter += "\nmodel: " + model;
@@ -46,7 +48,7 @@ public sealed class AgentFileWriter(ProfilePaths paths)
 
     public AgentFileOutcome Write(InstalledAgentFile? recorded, bool overwriteEdited, string? model = null)
     {
-        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(model));
+        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(SuperpowersFunction.General, model));
         var hash = ContentHash.Of(content);
         var current = new InstalledAgentFile(hash, BootstrapText.Version);
 
@@ -79,7 +81,7 @@ public sealed class AgentFileWriter(ProfilePaths paths)
     public FunctionAgentFileOutcome WriteFunctionAgent(SuperpowersFunction function, string? model, InstalledFunctionAgentFile? recorded, bool overwriteEdited)
     {
         var path = FunctionAgentFilePath(paths, function);
-        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(model));
+        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(function, model));
         var hash = ContentHash.Of(content);
         var current = new InstalledFunctionAgentFile(function.ToString(), hash, BootstrapText.Version);
 

@@ -22,16 +22,27 @@ namespace TheKameleon.Superpowers.Vsix
     [DataContract]
     internal sealed class ModelPreferenceRow : NotifyPropertyChangedObject
     {
+        private SuperpowersFunction function;
         private string family = string.Empty;
         private string model = string.Empty;
 
         public ModelPreferenceRow(SuperpowersFunction function)
         {
-            this.Function = function;
+            this.function = function;
         }
 
         [DataMember]
-        public SuperpowersFunction Function { get; }
+        public SuperpowersFunction Function
+        {
+            get => this.function;
+            set
+            {
+                if (this.SetProperty(ref this.function, value))
+                {
+                    this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
+                }
+            }
+        }
 
         [DataMember]
         public string FunctionLabel => this.Function.ToString();
@@ -204,6 +215,9 @@ namespace TheKameleon.Superpowers.Vsix
         public ObservableList<ModelPreferenceRow> FunctionRows { get; } = new();
 
         [DataMember]
+        public ObservableList<SuperpowersFunction> FunctionOptions { get; } = new(Enum.GetValues<SuperpowersFunction>());
+
+        [DataMember]
         public IAsyncCommand RefreshModelCatalogCommand { get; }
 
         [DataMember]
@@ -261,9 +275,11 @@ namespace TheKameleon.Superpowers.Vsix
                 ?? this.releases.FirstOrDefault(candidate => candidate.Release == ReleaseSelection.DefaultRelease(this.releases.Select(r => r.Release)));
             this.SelectedReleaseVersion = preferred is null ? null : this.Label(preferred);
 
+            var savedPreferences = this.modelPreferencesStore.Load();
+
             if (state.Release is not null)
             {
-                var refresh = await Task.Run(() => this.setup.RefreshAgent(), cancellationToken).ConfigureAwait(false);
+                var refresh = await Task.Run(() => this.setup.RefreshAgent(savedPreferences), cancellationToken).ConfigureAwait(false);
                 this.StatusText = refresh.Messages.FirstOrDefault() ?? "Superpowers is installed.";
             }
             else
@@ -275,7 +291,6 @@ namespace TheKameleon.Superpowers.Vsix
 
             await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
 
-            var savedPreferences = this.modelPreferencesStore.Load();
             this.SelectedPlan = savedPreferences.Plan;
             this.FunctionRows.Clear();
             this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function) { Family = p.Family, Model = p.Model }));
@@ -445,13 +460,16 @@ namespace TheKameleon.Superpowers.Vsix
 
         private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
         {
+            var deduped = new Dictionary<SuperpowersFunction, ModelPreference>();
+            foreach (var row in this.FunctionRows.Where(row => !string.IsNullOrWhiteSpace(row.Model)))
+            {
+                deduped[row.Function] = new ModelPreference(row.Function, row.Family.Trim(), row.Model.Trim());
+            }
+
             var preferences = new ModelPreferences
             {
                 Plan = this.SelectedPlan,
-                Preferences = this.FunctionRows
-                    .Where(row => !string.IsNullOrWhiteSpace(row.Model))
-                    .Select(row => new ModelPreference(row.Function, row.Family, row.Model))
-                    .ToArray(),
+                Preferences = deduped.Values.ToArray(),
             };
             this.modelPreferencesStore.Save(preferences);
             this.StatusText = "Model preferences saved. Select Install or Repair to apply them.";

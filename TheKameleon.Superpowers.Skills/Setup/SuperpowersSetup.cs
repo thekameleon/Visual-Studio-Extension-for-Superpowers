@@ -62,7 +62,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             .Select(SkillInstaller.Describe);
         var seed = known with { Skills = known.Skills.Concat(adopted).ToArray() };
         if (seed.AgentFile is null && File.Exists(paths.AgentFile)
-            && string.Equals(ContentHash.OfFile(paths.AgentFile), ContentHash.Of(System.Text.Encoding.UTF8.GetBytes(AgentFileWriter.BuildContent())), StringComparison.OrdinalIgnoreCase))
+            && string.Equals(ContentHash.OfFile(paths.AgentFile), ContentHash.Of(System.Text.Encoding.UTF8.GetBytes(AgentFileWriter.BuildContent(SuperpowersFunction.General))), StringComparison.OrdinalIgnoreCase))
         {
             seed = seed with { AgentFile = new InstalledAgentFile(ContentHash.OfFile(paths.AgentFile), BootstrapText.Version) };
         }
@@ -122,7 +122,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
         return new SetupResult(SetupStatus.Succeeded, Array.Empty<string>(), state);
     }
 
-    public SetupResult RefreshAgent()
+    public SetupResult RefreshAgent(ModelPreferences? modelPreferences = null)
     {
         using var _ = InstallLock.Acquire(LockTimeout);
         var load = store.Load();
@@ -131,7 +131,8 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Succeeded, Array.Empty<string>(), load.State);
         }
 
-        var outcome = agent.Write(load.State.AgentFile, overwriteEdited: false);
+        var generalModel = modelPreferences?.Preferences.FirstOrDefault(p => p.Function == SuperpowersFunction.General)?.Model;
+        var outcome = agent.Write(load.State.AgentFile, overwriteEdited: false, generalModel);
         if (outcome.Status == AgentFileStatus.EditedKept)
         {
             return new SetupResult(SetupStatus.Partial, new[] { "A newer Superpowers agent is available, but your edited superpowers.agent.md was kept. Use Install to replace it." }, load.State);
@@ -162,6 +163,10 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
 
         var knownFunctionFiles = seed.FunctionAgentFiles.ToDictionary(f => f.Function, StringComparer.Ordinal);
         var functionAgentFiles = new List<InstalledFunctionAgentFile>();
+        var desiredFunctions = modelPreferences.Preferences
+            .Where(p => p.Function != SuperpowersFunction.General)
+            .Select(p => p.Function)
+            .ToHashSet();
         foreach (var preference in modelPreferences.Preferences.Where(p => p.Function != SuperpowersFunction.General))
         {
             knownFunctionFiles.TryGetValue(preference.Function.ToString(), out var recorded);
@@ -174,6 +179,16 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             if (functionOutcome.Agent is not null)
             {
                 functionAgentFiles.Add(functionOutcome.Agent);
+            }
+        }
+
+        foreach (var orphan in seed.FunctionAgentFiles.Where(f => !desiredFunctions.Contains(Enum.Parse<SuperpowersFunction>(f.Function))))
+        {
+            var removeOutcome = agent.RemoveFunctionAgent(Enum.Parse<SuperpowersFunction>(orphan.Function), orphan);
+            if (removeOutcome.Status == AgentFileStatus.EditedNotRemoved)
+            {
+                messages.Add($"Your edited superpowers-{orphan.Function.ToLowerInvariant()}.agent.md was left in place.");
+                functionAgentFiles.Add(orphan);
             }
         }
 

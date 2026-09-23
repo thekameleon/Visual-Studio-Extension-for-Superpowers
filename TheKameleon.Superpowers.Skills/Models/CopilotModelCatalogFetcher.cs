@@ -108,24 +108,39 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
                 return null;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var memory = new MemoryStream();
-            var buffer = new byte[8192];
-            int read;
-            long total = 0;
-            while ((read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            using var bodyTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bodyTimeout.Token);
+            try
             {
-                total += read;
-                if (total > MaxDownloadBytes)
+                await using var stream = await response.Content.ReadAsStreamAsync(linked.Token).ConfigureAwait(false);
+                using var memory = new MemoryStream();
+                var buffer = new byte[8192];
+                int read;
+                long total = 0;
+                while ((read = await stream.ReadAsync(buffer, linked.Token).ConfigureAwait(false)) > 0)
                 {
-                    problems.Add("The model list response was larger than expected and was rejected.");
-                    return null;
+                    total += read;
+                    if (total > MaxDownloadBytes)
+                    {
+                        problems.Add("The model list response was larger than expected and was rejected.");
+                        return null;
+                    }
+
+                    memory.Write(buffer, 0, read);
                 }
 
-                memory.Write(buffer, 0, read);
+                return Encoding.UTF8.GetString(memory.ToArray());
             }
-
-            return Encoding.UTF8.GetString(memory.ToArray());
+            catch (IOException exception)
+            {
+                problems.Add($"Couldn't read the model list ({url}): {exception.Message}");
+                return null;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                problems.Add($"Couldn't read the model list ({url}): the request timed out.");
+                return null;
+            }
         }
     }
 

@@ -97,12 +97,16 @@
                         <DataTemplate>
                             <Grid Margin="0,2,0,2">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="110" />
                                     <ColumnDefinition Width="100" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding FunctionLabel}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="0"
+                                          ItemsSource="{Binding DataContext.FunctionOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                          SelectedItem="{Binding Function, Mode=TwoWay}"
+                                          Margin="0,0,4,0"
+                                          AutomationProperties.Name="Superpowers function" />
                                 <TextBox Grid.Column="1" Text="{Binding Family, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="4,0" AutomationProperties.Name="Model family" />
                                 <TextBox Grid.Column="2" Text="{Binding Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="4,0" AutomationProperties.Name="Model name" />
                                 <Button Grid.Column="3" Command="{Binding DataContext.RemovePreferenceRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"

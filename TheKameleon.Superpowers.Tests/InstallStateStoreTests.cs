@@ -83,6 +83,20 @@ public sealed class InstallStateStoreTests : IDisposable
     }
 
     [Fact]
+    public void SchemaVersion1StateMigratesToVersion2WithEmptyFunctionAgentFiles()
+    {
+        Directory.CreateDirectory(profile.Paths.StateDirectory);
+        File.WriteAllText(profile.Paths.StateFile, "{\"schemaVersion\": 1, \"skills\": [], \"alwaysOn\": {\"enabled\": false, \"createdFile\": false}}");
+
+        var load = new InstallStateStore(profile.Paths).Load();
+
+        Assert.Equal(InstallStateStatus.Loaded, load.Status);
+        Assert.Equal(InstallState.CurrentSchemaVersion, load.State.SchemaVersion);
+        Assert.Equal(2, load.State.SchemaVersion);
+        Assert.Empty(load.State.FunctionAgentFiles);
+    }
+
+    [Fact]
     public void ContentHashIsLowercaseSha256()
     {
         Assert.Equal("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", ContentHash.Of("abc"u8.ToArray()));

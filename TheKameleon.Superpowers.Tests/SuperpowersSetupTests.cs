@@ -1,5 +1,6 @@
 using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 using TheKameleon.Superpowers.Skills.Setup;
 
 namespace TheKameleon.Superpowers.Tests;
@@ -118,7 +119,86 @@ public sealed class SuperpowersSetupTests : IDisposable
         var result = Setup.RefreshAgent();
 
         Assert.Equal(SetupStatus.Succeeded, result.Status);
-        Assert.Equal(AgentFileWriter.BuildContent(), File.ReadAllText(profile.Paths.AgentFile));
+        Assert.Equal(AgentFileWriter.BuildContent(SuperpowersFunction.General), File.ReadAllText(profile.Paths.AgentFile));
+    }
+
+    [Fact]
+    public void RefreshAgentWithNoPreferencesDoesNotAddAModelLine()
+    {
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
+
+        var result = Setup.RefreshAgent();
+
+        Assert.Equal(SetupStatus.Succeeded, result.Status);
+        Assert.DoesNotContain("model:", File.ReadAllText(profile.Paths.AgentFile));
+    }
+
+    [Fact]
+    public void RefreshAgentWithoutAGeneralPreferenceDoesNotAddAModelLine()
+    {
+        var preferences = new ModelPreferences
+        {
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+        };
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
+
+        var result = Setup.RefreshAgent(preferences);
+
+        Assert.Equal(SetupStatus.Succeeded, result.Status);
+        Assert.DoesNotContain("model:", File.ReadAllText(profile.Paths.AgentFile));
+    }
+
+    [Fact]
+    public void RefreshAgentPreservesTheGeneralModelPreference()
+    {
+        var preferences = new ModelPreferences
+        {
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.General, "Anthropic", "Claude Opus 5.5") },
+        };
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
+        Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(profile.Paths.AgentFile));
+
+        var result = Setup.RefreshAgent(preferences);
+
+        Assert.Equal(SetupStatus.Succeeded, result.Status);
+        Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(profile.Paths.AgentFile));
+    }
+
+    [Fact]
+    public void InstallRemovesOrphanedFunctionAgentFileWhenPreferenceIsDropped()
+    {
+        var withReview = new ModelPreferences
+        {
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+        };
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
+        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
+        Assert.True(File.Exists(path));
+
+        var withoutReview = ModelPreferences.Empty;
+        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withoutReview);
+
+        Assert.False(File.Exists(path));
+        Assert.Empty(result.State.FunctionAgentFiles);
+    }
+
+    [Fact]
+    public void InstallKeepsOrphanedFunctionAgentFileInStateWhenEdited()
+    {
+        var withReview = new ModelPreferences
+        {
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "OpenAI", "GPT-5.4") },
+        };
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
+        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
+        File.AppendAllText(path, "my edit");
+
+        var withoutReview = ModelPreferences.Empty;
+        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withoutReview);
+
+        Assert.True(File.Exists(path));
+        Assert.Contains("my edit", File.ReadAllText(path));
+        Assert.Single(result.State.FunctionAgentFiles);
     }
 
     [Fact]

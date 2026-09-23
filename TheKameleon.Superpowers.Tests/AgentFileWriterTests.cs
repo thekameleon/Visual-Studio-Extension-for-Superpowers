@@ -28,7 +28,7 @@ public sealed class AgentFileWriterTests : IDisposable
     [Fact]
     public void AgentFileHasFrontMatterAndNoToolsList()
     {
-        var content = AgentFileWriter.BuildContent();
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General);
 
         Assert.StartsWith("---\nname: Superpowers\ndescription: ", content, StringComparison.Ordinal);
         Assert.DoesNotContain("tools:", content, StringComparison.Ordinal);
@@ -71,7 +71,7 @@ public sealed class AgentFileWriterTests : IDisposable
         var outcome = Writer.Write(recorded, overwriteEdited: false);
 
         Assert.Equal(AgentFileStatus.Written, outcome.Status);
-        Assert.Equal(AgentFileWriter.BuildContent(), File.ReadAllText(profile.Paths.AgentFile));
+        Assert.Equal(AgentFileWriter.BuildContent(SuperpowersFunction.General), File.ReadAllText(profile.Paths.AgentFile));
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class AgentFileWriterTests : IDisposable
     [Fact]
     public void BuildContentOmitsModelFieldWhenNull()
     {
-        var content = AgentFileWriter.BuildContent(model: null);
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, model: null);
 
         Assert.DoesNotContain("model:", content);
     }
@@ -100,9 +100,20 @@ public sealed class AgentFileWriterTests : IDisposable
     [Fact]
     public void BuildContentIncludesModelFieldWhenProvided()
     {
-        var content = AgentFileWriter.BuildContent(model: "Claude Opus 5.5");
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, model: "Claude Opus 5.5");
 
         Assert.Contains("model: Claude Opus 5.5", content);
+    }
+
+    [Fact]
+    public void BuildContentGivesEachNonGeneralFunctionADistinctNameAndDescription()
+    {
+        var general = AgentFileWriter.BuildContent(SuperpowersFunction.General);
+        var review = AgentFileWriter.BuildContent(SuperpowersFunction.Review);
+
+        Assert.Contains("name: Superpowers (Review)", review);
+        Assert.NotEqual(general, review);
+        Assert.DoesNotContain("name: Superpowers\n", review);
     }
 
     [Fact]
