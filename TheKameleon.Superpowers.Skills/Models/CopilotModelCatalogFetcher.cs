@@ -23,8 +23,13 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
     {
         var problems = new List<string>();
         var releaseStatusText = await this.DownloadTextAsync(ReleaseStatusUrl, problems, cancellationToken).ConfigureAwait(false);
+        if (releaseStatusText is null)
+        {
+            return new ModelCatalogFetchResult(null, problems);
+        }
+
         var supportedPlansText = await this.DownloadTextAsync(SupportedPlansUrl, problems, cancellationToken).ConfigureAwait(false);
-        if (releaseStatusText is null || supportedPlansText is null)
+        if (supportedPlansText is null)
         {
             return new ModelCatalogFetchResult(null, problems);
         }
@@ -75,6 +80,11 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
         catch (HttpRequestException exception)
         {
             problems.Add($"Couldn't reach the model list ({url}): {exception.Message}");
+            return null;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            problems.Add($"Couldn't reach the model list ({url}): the request timed out.");
             return null;
         }
 

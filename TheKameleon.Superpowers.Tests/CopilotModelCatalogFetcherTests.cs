@@ -59,6 +59,18 @@ public sealed class CopilotModelCatalogFetcherTests
         Assert.Contains(result.Problems, p => p.Contains("format has changed"));
     }
 
+    [Fact]
+    public async Task FallsBackWithProblemOnInternalHttpClientTimeout()
+    {
+        var handler = new TimeoutHttpMessageHandler();
+        var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
+
+        var result = await fetcher.FetchAsync(CancellationToken.None);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Problems, p => p.Contains("timed out"));
+    }
+
     private static HttpResponseMessage Respond(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body) };
 
@@ -66,5 +78,14 @@ public sealed class CopilotModelCatalogFetcherTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(respond(request.RequestUri!.ToString()));
+    }
+
+    /// <summary>Simulates HttpClient's own internal Timeout firing: throws TaskCanceledException
+    /// unconditionally, without regard to the CancellationToken the caller passed in, so tests can
+    /// distinguish "internal timeout" from "caller-requested cancellation".</summary>
+    private sealed class TimeoutHttpMessageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new TaskCanceledException("Simulated HttpClient timeout");
     }
 }
