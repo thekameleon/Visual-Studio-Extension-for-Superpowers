@@ -66,9 +66,16 @@ public sealed class InstallStateStoreTests : IDisposable
     [Fact]
     public void LockIsExclusiveAcrossThreads()
     {
+        using var backgroundStarted = new ManualResetEventSlim(false);
         using (InstallLock.Acquire(TimeSpan.FromSeconds(5)))
         {
-            var other = Task.Run(() => Assert.Throws<TimeoutException>(() => InstallLock.Acquire(TimeSpan.FromMilliseconds(100))));
+            var other = Task.Run(() =>
+            {
+                backgroundStarted.Set();
+                Assert.Throws<TimeoutException>(() => InstallLock.Acquire(TimeSpan.FromSeconds(2)));
+            });
+
+            Assert.True(backgroundStarted.Wait(TimeSpan.FromSeconds(5)), "Background task did not start in time.");
             other.GetAwaiter().GetResult();
         }
 
