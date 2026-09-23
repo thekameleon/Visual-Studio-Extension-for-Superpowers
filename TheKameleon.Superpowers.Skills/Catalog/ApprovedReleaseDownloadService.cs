@@ -9,6 +9,8 @@ namespace TheKameleon.Superpowers.Skills.Catalog;
 public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
 {
     public const int MaxDownloadBytes = 25 * 1024 * 1024;
+    public const int MaxArchiveEntries = 10_000;
+    public const long MaxExtractedBytes = 100L * 1024 * 1024;
 
     private readonly HttpClient httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
@@ -34,7 +36,7 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
             return new DownloadActivationResult(null, null, diagnostics);
         }
 
-        var stagingRoot = Path.Combine(Path.GetTempPath(), "TheKameleon.Superpowers", "downloads", Guid.NewGuid().ToString("N"));
+        var stagingRoot = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(targetDirectory))!, ".staging", Guid.NewGuid().ToString("N"));
         var releaseRoot = Path.Combine(stagingRoot, "releases", release.ReleaseTag);
         var sourceZipPath = Path.Combine(releaseRoot, "source.zip");
         var extractedRoot = Path.Combine(stagingRoot, "expanded");
@@ -99,6 +101,12 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
             {
                 Directory.Delete(stagingRoot, recursive: true);
             }
+
+            var stagingParent = Path.GetDirectoryName(stagingRoot)!;
+            if (Directory.Exists(stagingParent) && !Directory.EnumerateFileSystemEntries(stagingParent).Any())
+            {
+                Directory.Delete(stagingParent);
+            }
         }
     }
 
@@ -136,13 +144,25 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
                 return null;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var memory = new MemoryStream();
-            await stream.CopyToAsync(memory, cancellationToken).ConfigureAwait(false);
-            if (memory.Length > MaxDownloadBytes)
+            if (response.Content.Headers.ContentLength > MaxDownloadBytes)
             {
                 diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT610", $"Approved release download exceeds the supported size of {MaxDownloadBytes} bytes."));
                 return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var memory = new MemoryStream();
+            var buffer = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                if (memory.Length + read > MaxDownloadBytes)
+                {
+                    diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT610", $"Approved release download exceeds the supported size of {MaxDownloadBytes} bytes."));
+                    return null;
+                }
+
+                memory.Write(buffer, 0, read);
             }
 
             return memory.ToArray();
@@ -153,32 +173,22 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
     {
         var targetFullPath = Path.GetFullPath(targetDirectory);
         Directory.CreateDirectory(Path.GetDirectoryName(targetFullPath)!);
-
         var backupPath = targetFullPath + ".backup-" + Guid.NewGuid().ToString("N");
-        var targetExisted = Directory.Exists(targetFullPath);
+        var movedOriginal = false;
+
         try
-        {
-            if (targetExisted)
-            {
-                Directory.Move(targetFullPath, backupPath);
-            }
-
-            Directory.Move(stagingRoot, targetFullPath);
-            if (Directory.Exists(backupPath))
-            {
-                Directory.Delete(backupPath, recursive: true);
-            }
-
-            return targetFullPath;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             if (Directory.Exists(targetFullPath))
             {
-                Directory.Delete(targetFullPath, recursive: true);
+                Directory.Move(targetFullPath, backupPath);
+                movedOriginal = true;
             }
 
-            if (Directory.Exists(backupPath))
+            Directory.Move(stagingRoot, targetFullPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            if (movedOriginal && !Directory.Exists(targetFullPath))
             {
                 Directory.Move(backupPath, targetFullPath);
             }
@@ -186,18 +196,38 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
             diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT611", $"Approved release activation failed and the previous selection was preserved: {exception.Message}"));
             return string.Empty;
         }
+
+        try
+        {
+            if (Directory.Exists(backupPath))
+            {
+                Directory.Delete(backupPath, recursive: true);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Warning, "SPCAT613", $"The previous release could not be cleaned up: {exception.Message}"));
+        }
+
+        return targetFullPath;
     }
 
     private static void ExtractArchiveSafely(byte[] archiveBytes, string destinationRoot, List<ParseDiagnostic> diagnostics)
     {
         using var archiveStream = new MemoryStream(archiveBytes, writable: false);
         using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: false);
-        var destinationFullPath = Path.GetFullPath(destinationRoot);
+        var root = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (archive.Entries.Count > MaxArchiveEntries || archive.Entries.Sum(entry => entry.Length) > MaxExtractedBytes)
+        {
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT612", $"Downloaded release archive is too large when extracted (limit {MaxArchiveEntries} entries, {MaxExtractedBytes} bytes)."));
+            return;
+        }
 
         foreach (var entry in archive.Entries)
         {
-            var destinationPath = Path.GetFullPath(Path.Combine(destinationFullPath, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
-            if (!destinationPath.StartsWith(destinationFullPath, StringComparison.OrdinalIgnoreCase))
+            var destinationPath = Path.GetFullPath(Path.Combine(root, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
+            if (!destinationPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
             {
                 diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT606", $"Downloaded release archive contains an unsafe path '{entry.FullName}'."));
                 return;
@@ -324,9 +354,11 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
 
     private static bool IsApprovedRelease(DiscoveredRemoteRelease release)
     {
-        return string.Equals(release.SourceRepositoryUrl, ApprovedReleaseDiscoveryService.ApprovedRepositoryUrl, StringComparison.OrdinalIgnoreCase)
-            && Uri.TryCreate(release.DetailsUrl, UriKind.Absolute, out var detailsUri)
+        return Uri.TryCreate(release.DetailsUrl, UriKind.Absolute, out var detailsUri)
             && Uri.TryCreate(release.ZipballUrl, UriKind.Absolute, out var zipballUri)
+            && detailsUri.Scheme == Uri.UriSchemeHttps
+            && zipballUri.Scheme == Uri.UriSchemeHttps
+            && string.Equals(release.SourceRepositoryUrl, ApprovedReleaseDiscoveryService.ApprovedRepositoryUrl, StringComparison.OrdinalIgnoreCase)
             && string.Equals(detailsUri.Host, "github.com", StringComparison.OrdinalIgnoreCase)
             && detailsUri.AbsolutePath.StartsWith("/obra/superpowers/releases/", StringComparison.OrdinalIgnoreCase)
             && string.Equals(zipballUri.Host, "api.github.com", StringComparison.OrdinalIgnoreCase)

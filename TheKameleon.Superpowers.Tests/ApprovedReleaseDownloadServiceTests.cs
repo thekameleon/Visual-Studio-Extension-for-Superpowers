@@ -67,7 +67,65 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PreservesExistingActiveDirectoryWhenActivationFails()
+    public async Task RejectsPlainHttpUrls()
+    {
+        using var client = CreateClient(_ => CreateZipResponse(CreateValidArchive()));
+        var release = CreateApprovedRelease() with { ZipballUrl = "http://api.github.com/repos/obra/superpowers/zipball/v1.0.0" };
+
+        var result = await new ApprovedReleaseDownloadService(client).DownloadAndActivateAsync(release, Path.Combine(tempRoot, "t"), true, CancellationToken.None);
+
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT602");
+    }
+
+    [Fact]
+    public async Task StopsReadingOversizedDownloadsWhileStreaming()
+    {
+        var oversized = new byte[ApprovedReleaseDownloadService.MaxDownloadBytes + 1];
+        using var client = CreateClient(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new MemoryStream(oversized)) });
+
+        var result = await new ApprovedReleaseDownloadService(client).DownloadAndActivateAsync(CreateApprovedRelease(), Path.Combine(tempRoot, "t"), true, CancellationToken.None);
+
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT610");
+    }
+
+    [Fact]
+    public async Task RejectsTraversalIntoASiblingFolderWithTheSamePrefix()
+    {
+        using var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteEntry(archive, "release-root/LICENSE", "MIT License");
+            WriteEntry(archive, "../expanded-evil/owned.txt", "nope");
+        }
+
+        using var client = CreateClient(_ => CreateZipResponse(memory.ToArray()));
+
+        var result = await new ApprovedReleaseDownloadService(client).DownloadAndActivateAsync(CreateApprovedRelease(), Path.Combine(tempRoot, "t"), true, CancellationToken.None);
+
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT606");
+    }
+
+    [Fact]
+    public async Task KeepsTheActiveReleaseWhenItCannotBeMovedAside()
+    {
+        var target = Path.Combine(tempRoot, "active-catalog");
+        Directory.CreateDirectory(target);
+        var sentinel = Path.Combine(target, "sentinel.txt");
+        await File.WriteAllTextAsync(sentinel, "keep");
+        using var client = CreateClient(_ => CreateZipResponse(CreateValidArchive()));
+
+        DownloadActivationResult result;
+        using (new FileStream(sentinel, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            result = await new ApprovedReleaseDownloadService(client).DownloadAndActivateAsync(CreateApprovedRelease(), target, true, CancellationToken.None);
+        }
+
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT611");
+        Assert.Equal("keep", await File.ReadAllTextAsync(sentinel));
+    }
+
+    [Fact]
+    public async Task PreservesExistingActiveDirectoryWhenLicenseIsMissing()
     {
         Directory.CreateDirectory(tempRoot);
         var existingTarget = Path.Combine(tempRoot, "active-catalog");
