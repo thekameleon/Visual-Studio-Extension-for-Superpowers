@@ -13,11 +13,44 @@ using TheKameleon.Superpowers.Core.Contracts.Catalog;
 using TheKameleon.Superpowers.Core.Contracts.Settings;
 using TheKameleon.Superpowers.Skills.Catalog;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 using TheKameleon.Superpowers.Skills.Setup;
 using TheKameleon.Superpowers.Skills.Status;
 
 namespace TheKameleon.Superpowers.Vsix
 {
+    [DataContract]
+    internal sealed class ModelPreferenceRow : NotifyPropertyChangedObject
+    {
+        private string family = string.Empty;
+        private string model = string.Empty;
+
+        public ModelPreferenceRow(SuperpowersFunction function)
+        {
+            this.Function = function;
+        }
+
+        [DataMember]
+        public SuperpowersFunction Function { get; }
+
+        [DataMember]
+        public string FunctionLabel => this.Function.ToString();
+
+        [DataMember]
+        public string Family
+        {
+            get => this.family;
+            set => this.SetProperty(ref this.family, value);
+        }
+
+        [DataMember]
+        public string Model
+        {
+            get => this.model;
+            set => this.SetProperty(ref this.model, value);
+        }
+    }
+
     [DataContract]
     internal sealed class SuperpowersViewModel : NotifyPropertyChangedObject
     {
@@ -29,6 +62,12 @@ namespace TheKameleon.Superpowers.Vsix
         private readonly string catalogRoot;
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
         private IReadOnlyList<AvailableRelease> releases = Array.Empty<AvailableRelease>();
+        private readonly CopilotModelCatalogFetcher modelCatalogFetcher = new(Http);
+        private readonly ModelCatalogCacheStore modelCatalogCacheStore;
+        private readonly ModelPreferencesStore modelPreferencesStore;
+        private CopilotModelCatalog? modelCatalog;
+        private string modelCatalogStatusText = "Model list not loaded yet.";
+        private CopilotPlan selectedPlan = CopilotPlan.Unspecified;
 
         private string? selectedReleaseVersion;
         private string statusText = "Loading Superpowers…";
@@ -43,6 +82,12 @@ namespace TheKameleon.Superpowers.Vsix
             this.extensibility = extensibility ?? throw new ArgumentNullException(nameof(extensibility));
             this.setup = new SuperpowersSetup(this.paths);
             this.catalogRoot = Path.Combine(AppContext.BaseDirectory, CatalogRelativeRoot.Replace('/', Path.DirectorySeparatorChar));
+            this.modelCatalogCacheStore = new ModelCatalogCacheStore(this.paths);
+            this.modelPreferencesStore = new ModelPreferencesStore(this.paths);
+            this.modelCatalog = this.modelCatalogCacheStore.Load();
+            this.modelCatalogStatusText = this.modelCatalog is null
+                ? "Model list not loaded yet. Type a model name manually, or select Refresh model list."
+                : $"Model list last refreshed {this.modelCatalog.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC.";
 
             this.InstallCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.InstallAsync, cancellationToken));
             this.RepairCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RepairAsync, cancellationToken));
@@ -50,6 +95,10 @@ namespace TheKameleon.Superpowers.Vsix
             this.RefreshCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshStatusAsync, cancellationToken));
             this.ToggleAlwaysOnCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.ToggleAlwaysOnAsync, cancellationToken));
             this.CheckForUpdatesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.CheckForUpdatesAsync, cancellationToken));
+            this.RefreshModelCatalogCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshModelCatalogAsync, cancellationToken));
+            this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { this.FunctionRows.Add(new ModelPreferenceRow(SuperpowersFunction.General)); return Task.CompletedTask; });
+            this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
+            this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
         }
 
         [DataMember]
@@ -134,6 +183,38 @@ namespace TheKameleon.Superpowers.Vsix
         [DataMember]
         public IAsyncCommand CheckForUpdatesCommand { get; }
 
+        [DataMember]
+        public string ModelCatalogStatusText
+        {
+            get => this.modelCatalogStatusText;
+            set => this.SetProperty(ref this.modelCatalogStatusText, value);
+        }
+
+        [DataMember]
+        public ObservableList<CopilotPlan> PlanOptions { get; } = new(Enum.GetValues<CopilotPlan>());
+
+        [DataMember]
+        public CopilotPlan SelectedPlan
+        {
+            get => this.selectedPlan;
+            set => this.SetProperty(ref this.selectedPlan, value);
+        }
+
+        [DataMember]
+        public ObservableList<ModelPreferenceRow> FunctionRows { get; } = new();
+
+        [DataMember]
+        public IAsyncCommand RefreshModelCatalogCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand AddPreferenceRowCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand RemovePreferenceRowCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand SaveModelPreferencesCommand { get; }
+
         public Task InitializeAsync(CancellationToken cancellationToken) => this.RunAsync(this.LoadAsync, cancellationToken);
 
         private async Task RunAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken)
@@ -193,6 +274,11 @@ namespace TheKameleon.Superpowers.Vsix
             }
 
             await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
+
+            var savedPreferences = this.modelPreferencesStore.Load();
+            this.SelectedPlan = savedPreferences.Plan;
+            this.FunctionRows.Clear();
+            this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function) { Family = p.Family, Model = p.Model }));
         }
 
         private async Task InstallAsync(CancellationToken cancellationToken)
@@ -218,7 +304,7 @@ namespace TheKameleon.Superpowers.Vsix
             }
 
             var result = await Task.Run(
-                () => this.setup.Install(new InstalledRelease(release.ReleaseTag, release.ResolvedCommit, selected.Source), source, overwrite),
+                () => this.setup.Install(new InstalledRelease(release.ReleaseTag, release.ResolvedCommit, selected.Source), source, overwrite, this.modelPreferencesStore.Load()),
                 cancellationToken).ConfigureAwait(false);
             this.Report(result, $"Installed Superpowers {release.ReleaseTag}. Start a new Copilot Chat thread and choose the Superpowers agent.");
             await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
@@ -237,7 +323,7 @@ namespace TheKameleon.Superpowers.Vsix
             var release = selected.Release;
             var source = await Task.Run(() => ReleaseSkillLoader.Load(selected.CatalogRoot, release), cancellationToken).ConfigureAwait(false);
             var result = await Task.Run(
-                () => this.setup.Repair(new InstalledRelease(release.ReleaseTag, release.ResolvedCommit, selected.Source), source),
+                () => this.setup.Repair(new InstalledRelease(release.ReleaseTag, release.ResolvedCommit, selected.Source), source, this.modelPreferencesStore.Load()),
                 cancellationToken).ConfigureAwait(false);
             this.Report(result, $"Repaired Superpowers {release.ReleaseTag}.");
             await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
@@ -340,6 +426,36 @@ namespace TheKameleon.Superpowers.Vsix
             await this.LoadAsync(cancellationToken).ConfigureAwait(false);
             this.SelectedReleaseVersion = this.releases.Where(candidate => candidate.Release.ReleaseTag == newest.ReleaseTag).Select(this.Label).FirstOrDefault();
             this.StatusText = $"Downloaded {newest.ReleaseTag}. Select Install to use it.";
+        }
+
+        private async Task RefreshModelCatalogAsync(CancellationToken cancellationToken)
+        {
+            var result = await this.modelCatalogFetcher.FetchAsync(cancellationToken).ConfigureAwait(false);
+            if (!result.Succeeded)
+            {
+                this.ModelCatalogStatusText = "Couldn't refresh the model list. " + string.Join(" ", result.Problems)
+                    + (this.modelCatalog is null ? " Type a model name manually." : " Keeping the last known list.");
+                return;
+            }
+
+            this.modelCatalog = result.Catalog;
+            this.modelCatalogCacheStore.Save(result.Catalog!);
+            this.ModelCatalogStatusText = $"Model list refreshed {result.Catalog!.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC ({result.Catalog.Models.Count} models).";
+        }
+
+        private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
+        {
+            var preferences = new ModelPreferences
+            {
+                Plan = this.SelectedPlan,
+                Preferences = this.FunctionRows
+                    .Where(row => !string.IsNullOrWhiteSpace(row.Model))
+                    .Select(row => new ModelPreference(row.Function, row.Family, row.Model))
+                    .ToArray(),
+            };
+            this.modelPreferencesStore.Save(preferences);
+            this.StatusText = "Model preferences saved. Select Install or Repair to apply them.";
+            return Task.CompletedTask;
         }
 
         private AvailableRelease? SelectedRelease() =>
