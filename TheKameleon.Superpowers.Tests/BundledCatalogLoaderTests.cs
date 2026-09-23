@@ -73,6 +73,24 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Contains(release.Diagnostics, diagnostic => diagnostic.Code == "SPCAT423");
     }
 
+    [Fact]
+    public void AllowsSiblingCrossReferenceButRejectsRootEscapingReference()
+    {
+        var root = CreateSyntheticCatalogRootWithCrossSkillReferences();
+
+        var result = BundledCatalogLoader.LoadFromDirectory(root);
+
+        var release = Assert.Single(result.Releases);
+
+        Assert.DoesNotContain(release.Diagnostics, diagnostic =>
+            diagnostic.Message.Contains("bar/other.md", StringComparison.Ordinal));
+        Assert.Contains(release.Assets, asset => asset == "skills/bar/other.md");
+
+        Assert.True(release.HasErrors);
+        Assert.Contains(release.Diagnostics, diagnostic =>
+            diagnostic.Code == "SPCAT423" && diagnostic.Message.Contains("escape.md", StringComparison.Ordinal));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempRoot))
@@ -145,6 +163,128 @@ public sealed class BundledCatalogLoaderTests : IDisposable
             ---
             See [companion](visual-companion.md)
             """);
+        }
+
+        var provenancePath = Path.Combine(releaseRoot, "provenance.json");
+        var provenance = new
+        {
+            schemaVersion = 1,
+            releaseTag = "v1.0.0",
+            resolvedCommit = "abc123",
+            files = new[]
+            {
+                new { path = "source.zip", sha256 = ComputeSha256(archivePath) },
+                new { path = "LICENSE.txt", sha256 = ComputeSha256(licensePath) },
+                new { path = "adapter-manifest.json", sha256 = ComputeSha256(adapterManifestPath) },
+                new { path = "plan-metadata.json", sha256 = ComputeSha256(planMetadataPath) }
+            }
+        };
+        File.WriteAllText(provenancePath, JsonSerializer.Serialize(provenance));
+
+        var catalog = new
+        {
+            schemaVersion = 1,
+            sourceRepositoryUrl = "https://example.test/superpowers",
+            cutoffCapturedAtUtc = "2026-09-21T00:00:00Z",
+            releases = new[]
+            {
+                new
+                {
+                    releaseTag = "v1.0.0",
+                    resolvedCommit = "abc123",
+                    licensePath = "releases/v1.0.0/LICENSE.txt",
+                    archivePath = "releases/v1.0.0/source.zip",
+                    adapterManifestPath = "releases/v1.0.0/adapter-manifest.json",
+                    planMetadataPath = "releases/v1.0.0/plan-metadata.json",
+                    provenancePath = "releases/v1.0.0/provenance.json"
+                }
+            }
+        };
+        File.WriteAllText(Path.Combine(root, "catalog.json"), JsonSerializer.Serialize(catalog));
+        return root;
+    }
+
+    private string CreateSyntheticCatalogRootWithCrossSkillReferences()
+    {
+        var root = Path.Combine(tempRoot, "cross-reference-catalog");
+        var releaseRoot = Path.Combine(root, "releases", "v1.0.0");
+        Directory.CreateDirectory(releaseRoot);
+
+        var licensePath = Path.Combine(releaseRoot, "LICENSE.txt");
+        File.WriteAllText(licensePath, "MIT License");
+
+        var adapterManifestPath = Path.Combine(releaseRoot, "adapter-manifest.json");
+        File.WriteAllText(adapterManifestPath, """
+        {
+          "schemaVersion": 1,
+          "actions": [
+            {
+              "actionId": "Foo",
+              "skillPath": "skills/foo/SKILL.md",
+              "requiresApproval": false
+            },
+            {
+              "actionId": "Baz",
+              "skillPath": "skills/baz/SKILL.md",
+              "requiresApproval": false
+            }
+          ]
+        }
+        """);
+
+        var planMetadataPath = Path.Combine(releaseRoot, "plan-metadata.json");
+        File.WriteAllText(planMetadataPath, """
+        {
+          "schemaVersion": 1,
+          "entryPoint": "Foo",
+          "sourceRepository": "https://example.test/superpowers",
+          "releaseTag": "v1.0.0",
+          "composition": [
+            {
+              "order": 1,
+              "skillPath": "skills/foo/SKILL.md",
+              "purpose": "Sibling cross-reference"
+            }
+          ],
+          "notes": [
+            "Synthetic cross-reference test metadata"
+          ]
+        }
+        """);
+
+        var archivePath = Path.Combine(releaseRoot, "source.zip");
+        using (var stream = File.Create(archivePath))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: false))
+        {
+            var fooEntry = archive.CreateEntry("synthetic-release/skills/foo/SKILL.md");
+            using (var writer = new StreamWriter(fooEntry.Open()))
+            {
+                writer.Write("""
+                ---
+                name: foo
+                description: Sibling reference test
+                ---
+                See [other](../bar/other.md)
+                """);
+            }
+
+            var barEntry = archive.CreateEntry("synthetic-release/skills/bar/other.md");
+            using (var writer = new StreamWriter(barEntry.Open()))
+            {
+                writer.Write("Sibling asset content.");
+            }
+
+            var bazEntry = archive.CreateEntry("synthetic-release/skills/baz/SKILL.md");
+            using (var writer = new StreamWriter(bazEntry.Open()))
+            {
+                writer.Write("""
+                ---
+                name: baz
+                description: Root-escaping reference test
+                ---
+                See [escape](../../../escape.md)
+                """);
+            }
         }
 
         var provenancePath = Path.Combine(releaseRoot, "provenance.json");

@@ -387,7 +387,13 @@ public static class BundledCatalogLoader
 
             if (segment == "..")
             {
-                return null;
+                if (segments.Count == 0)
+                {
+                    return null;
+                }
+
+                segments.RemoveAt(segments.Count - 1);
+                continue;
             }
 
             segments.Add(segment);

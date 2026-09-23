@@ -42,7 +42,7 @@ public sealed class SkillDocumentParserTests
         name: Plan
         description: Create a plan.
         ---
-        Use [reference](../outside.md).
+        Use [reference](..\outside.md).
         """;
 
         var result = SkillDocumentParser.Parse(content);
@@ -60,5 +60,25 @@ public sealed class SkillDocumentParserTests
 
         Assert.True(result.HasErrors);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "SPCAT001");
+    }
+
+    [Fact]
+    public void AcceptsSiblingSkillCrossReference()
+    {
+        var document = SkillDocumentParser.Parse(
+            "---\nname: executing-plans\ndescription: x\n---\nSee [code review](../requesting-code-review/code-reviewer.md).\n");
+
+        Assert.Empty(document.Diagnostics);
+        Assert.Contains(document.References, reference => reference.RelativePath == "../requesting-code-review/code-reviewer.md");
+    }
+
+    [Fact]
+    public void StillRejectsAbsoluteAndRootedAndBackslashReferences()
+    {
+        foreach (var path in new[] { "https://example.com/x.md", "/etc/passwd", "..\\evil.md" })
+        {
+            var document = SkillDocumentParser.Parse($"---\nname: x\ndescription: x\n---\n[ref]({path})\n");
+            Assert.Contains(document.Diagnostics, diagnostic => diagnostic.Code == "SPCAT007");
+        }
     }
 }
