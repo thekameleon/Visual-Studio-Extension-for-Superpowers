@@ -63,6 +63,17 @@ public sealed class SkillArchiveReaderTests
     }
 
     [Fact]
+    public void RejectsEntryWhoseActualContentExceedsTheLimitRegardlessOfDeclaredSize()
+    {
+        using var archive = BuildArchive(("root/skills/a/SKILL.md", new string('y', 5_000)));
+
+        var result = SkillArchiveReader.Read(archive, new SkillArchiveLimits(MaxEntries: 100, MaxTotalBytes: 1_000));
+
+        Assert.Empty(result.Skills);
+        Assert.Contains(result.Problems, problem => problem.Contains("uncompressed", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void LoadsAllSkillsFromTheNewestBundledRelease()
     {
         var catalog = BundledCatalogLoader.LoadFromDirectory(TestSupport.BundledCatalogRoot);

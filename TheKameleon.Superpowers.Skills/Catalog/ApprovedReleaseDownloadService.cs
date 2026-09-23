@@ -218,12 +218,13 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
         using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: false);
         var root = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-        if (archive.Entries.Count > MaxArchiveEntries || archive.Entries.Sum(entry => entry.Length) > MaxExtractedBytes)
+        if (archive.Entries.Count > MaxArchiveEntries)
         {
             diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT612", $"Downloaded release archive is too large when extracted (limit {MaxArchiveEntries} entries, {MaxExtractedBytes} bytes)."));
             return;
         }
 
+        long totalBytes = 0;
         foreach (var entry in archive.Entries)
         {
             var destinationPath = Path.GetFullPath(Path.Combine(root, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
@@ -241,9 +242,38 @@ public sealed class ApprovedReleaseDownloadService(HttpClient httpClient)
 
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             using var source = entry.Open();
-            using var destination = File.Create(destinationPath);
-            source.CopyTo(destination);
+            using (var destination = File.Create(destinationPath))
+            {
+                if (!TryCopyWithinLimit(source, destination, MaxExtractedBytes, ref totalBytes))
+                {
+                    destination.Dispose();
+                    File.Delete(destinationPath);
+                    diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPCAT612", $"Downloaded release archive is too large when extracted (limit {MaxArchiveEntries} entries, {MaxExtractedBytes} bytes)."));
+                    return;
+                }
+            }
         }
+    }
+
+    /// <summary>Copies source to destination in bounded chunks, enforcing maxBytes against ACTUAL bytes
+    /// read rather than trusting any declared/metadata size, so a stream that decompresses to more than
+    /// it claimed is still caught. Returns false (copy aborted) if the limit is exceeded.</summary>
+    private static bool TryCopyWithinLimit(Stream source, Stream destination, long maxBytes, ref long totalBytesCopied)
+    {
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            totalBytesCopied += read;
+            if (totalBytesCopied > maxBytes)
+            {
+                return false;
+            }
+
+            destination.Write(buffer, 0, read);
+        }
+
+        return true;
     }
 
     private static string? FindLicenseFile(string extractedRoot)

@@ -43,16 +43,13 @@ public static class SkillArchiveReader
                 continue;
             }
 
-            totalBytes += entry.Length;
-            if (totalBytes > limits.MaxTotalBytes)
+            using var source = entry.Open();
+            using var memory = new MemoryStream();
+            if (!TryCopyWithinLimit(source, memory, limits.MaxTotalBytes, ref totalBytes))
             {
                 problems.Add($"Skill files exceed {limits.MaxTotalBytes} uncompressed bytes; the archive was rejected.");
                 return new SkillArchiveReadResult(Array.Empty<SkillPackage>(), problems);
             }
-
-            using var source = entry.Open();
-            using var memory = new MemoryStream();
-            source.CopyTo(memory);
 
             if (!skills.TryGetValue(name, out var files))
             {
@@ -72,5 +69,27 @@ public static class SkillArchiveReader
         return segment.Length > 0
             && segment is not "." and not ".."
             && segment.IndexOfAny(new[] { ':', '\0' }) < 0;
+    }
+
+    /// <summary>Copies source to destination in bounded chunks, enforcing maxBytes against ACTUAL bytes
+    /// read rather than trusting any declared/metadata size, so a stream that decompresses to more than
+    /// it claimed is still caught. Returns false (copy aborted, partial data may already be in destination)
+    /// if the limit is exceeded.</summary>
+    private static bool TryCopyWithinLimit(Stream source, Stream destination, long maxBytes, ref long totalBytesCopied)
+    {
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            totalBytesCopied += read;
+            if (totalBytesCopied > maxBytes)
+            {
+                return false;
+            }
+
+            destination.Write(buffer, 0, read);
+        }
+
+        return true;
     }
 }

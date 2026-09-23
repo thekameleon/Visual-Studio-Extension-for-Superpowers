@@ -175,6 +175,34 @@ public sealed class ApprovedReleaseDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExtractsArchiveContentCorrectlyAfterBoundingByActualBytes()
+    {
+        // ExtractArchiveSafely's MaxExtractedBytes is a public const on the class with no override
+        // parameter for tests to inject a smaller limit, and adding one would expand this fix's scope
+        // beyond the zip-bomb hardening it targets. This archive's real content is well under the
+        // production 100MB limit, so this is a regression/smoke test proving the refactored
+        // TryCopyWithinLimit path (bounding by actual bytes read instead of declared entry.Length)
+        // still extracts normal-sized content correctly, rather than a test of the adversarial
+        // declared-vs-actual mismatch itself (which SkillArchiveReaderTests covers for the sibling
+        // reader that does not write to disk).
+        var targetDirectory = Path.Combine(tempRoot, "active-catalog");
+        using var memory = new MemoryStream();
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteEntry(archive, "release-root/LICENSE", "MIT License");
+            WriteEntry(archive, "release-root/skills/brainstorming/SKILL.md", "---\nname: brainstorming\ndescription: Plan\n---\n" + new string('z', 200_000));
+            WriteEntry(archive, "release-root/skills/writing-plans/SKILL.md", "---\nname: writing-plans\ndescription: Plan writer\n---\nbody\n");
+        }
+
+        using var client = CreateClient(_ => CreateZipResponse(memory.ToArray()));
+        var service = new ApprovedReleaseDownloadService(client);
+
+        var result = await service.DownloadAndActivateAsync(CreateApprovedRelease(), targetDirectory, approvalGranted: true, CancellationToken.None);
+
+        Assert.False(result.HasErrors, string.Join(" ", result.Diagnostics.Select(d => d.Message)));
+    }
+
+    [Fact]
     public async Task RejectsIncompatibleDownloadedCatalog()
     {
         var targetDirectory = Path.Combine(tempRoot, "active-catalog");
