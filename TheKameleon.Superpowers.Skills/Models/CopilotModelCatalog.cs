@@ -21,7 +21,10 @@ public enum CopilotPlan
     Enterprise,
 }
 
+public sealed record CopilotModelCategory(string Model, string Category);
+
 public sealed record CopilotModelCatalog(
     IReadOnlyList<CopilotModel> Models,
     IReadOnlyList<CopilotModelPlanAvailability> PlanAvailability,
+    IReadOnlyList<CopilotModelCategory> Categories,
     DateTimeOffset FetchedAtUtc);

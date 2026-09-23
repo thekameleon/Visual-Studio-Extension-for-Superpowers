@@ -20,12 +20,29 @@ public sealed class CopilotModelCatalogFetcherTests
           enterprise: true
         """;
 
+    private const string ModelsAndPricingYaml = """
+        - model: 'GPT-5.4'
+          provider: openai
+          release_status: GA
+          category: Versatile
+          input: $1.00
+
+        - model: 'Claude Opus 5.5'
+          provider: anthropic
+          release_status: GA
+          category: Powerful
+          input: $5.00
+        """;
+
     [Fact]
     public async Task ReturnsCatalogOnSuccessfulFetch()
     {
-        var handler = new StubHttpMessageHandler(url => url.Contains("supported-plans")
-            ? Respond(SupportedPlansYaml)
-            : Respond(ReleaseStatusYaml));
+        var handler = new StubHttpMessageHandler(url => url switch
+        {
+            var u when u.Contains("supported-plans") => Respond(SupportedPlansYaml),
+            var u when u.Contains("models-and-pricing") => Respond(ModelsAndPricingYaml),
+            _ => Respond(ReleaseStatusYaml),
+        });
         var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
 
         var result = await fetcher.FetchAsync(CancellationToken.None);
@@ -33,6 +50,74 @@ public sealed class CopilotModelCatalogFetcherTests
         Assert.True(result.Succeeded);
         Assert.Single(result.Catalog!.Models);
         Assert.Equal("GPT-5.4", result.Catalog.Models[0].Name);
+    }
+
+    [Fact]
+    public async Task IncludesCategoriesWhenAllThreeFilesFetchSuccessfully()
+    {
+        var handler = new StubHttpMessageHandler(url => url switch
+        {
+            var u when u.Contains("supported-plans") => Respond(SupportedPlansYaml),
+            var u when u.Contains("models-and-pricing") => Respond(ModelsAndPricingYaml),
+            _ => Respond(ReleaseStatusYaml),
+        });
+        var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
+
+        var result = await fetcher.FetchAsync(CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains(result.Catalog!.Categories, c => c.Model == "GPT-5.4" && c.Category == "Versatile");
+    }
+
+    [Fact]
+    public async Task SucceedsWithEmptyCategoriesWhenThePricingFetchFails()
+    {
+        var handler = new StubHttpMessageHandler(url => url.Contains("models-and-pricing")
+            ? new HttpResponseMessage(HttpStatusCode.NotFound)
+            : url.Contains("supported-plans") ? Respond(SupportedPlansYaml) : Respond(ReleaseStatusYaml));
+        var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
+
+        var result = await fetcher.FetchAsync(CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Empty(result.Catalog!.Categories);
+        Assert.NotEmpty(result.Problems);
+    }
+
+    [Fact]
+    public async Task SucceedsWithEmptyCategoriesWhenThePricingShapeIsReshaped()
+    {
+        var handler = new StubHttpMessageHandler(url => url.Contains("models-and-pricing")
+            ? Respond("not:\n  - a: valid shape\nunder: a key")
+            : url.Contains("supported-plans") ? Respond(SupportedPlansYaml) : Respond(ReleaseStatusYaml));
+        var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
+
+        var result = await fetcher.FetchAsync(CancellationToken.None);
+
+        Assert.True(result.Succeeded);
+        Assert.Empty(result.Catalog!.Categories);
+    }
+
+    [Fact]
+    public async Task DedupesRepeatedModelRowsInThePricingFile()
+    {
+        const string duplicated = """
+            - model: 'GPT-5.4'
+              category: Versatile
+              input: $1.00
+
+            - model: 'GPT-5.4'
+              category: Versatile
+              input: $1.00
+            """;
+        var handler = new StubHttpMessageHandler(url => url.Contains("models-and-pricing")
+            ? Respond(duplicated)
+            : url.Contains("supported-plans") ? Respond(SupportedPlansYaml) : Respond(ReleaseStatusYaml));
+        var fetcher = new CopilotModelCatalogFetcher(new HttpClient(handler));
+
+        var result = await fetcher.FetchAsync(CancellationToken.None);
+
+        Assert.Single(result.Catalog!.Categories, c => c.Model == "GPT-5.4");
     }
 
     [Fact]

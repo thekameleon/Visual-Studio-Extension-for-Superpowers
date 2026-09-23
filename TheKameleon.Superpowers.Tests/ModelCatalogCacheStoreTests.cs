@@ -21,6 +21,7 @@ public sealed class ModelCatalogCacheStoreTests
         var catalog = new CopilotModelCatalog(
             new[] { new CopilotModel("GPT-5.4", "OpenAI", "GA") },
             new[] { new CopilotModelPlanAvailability("GPT-5.4", true, true, true, true, true) },
+            Array.Empty<CopilotModelCategory>(),
             DateTimeOffset.Parse("2026-09-23T00:00:00Z"));
 
         store.Save(catalog);

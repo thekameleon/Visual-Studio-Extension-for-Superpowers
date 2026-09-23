@@ -16,6 +16,7 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
     public const int MaxDownloadBytes = 512 * 1024;
     private const string ReleaseStatusUrl = "https://raw.githubusercontent.com/github/docs/main/data/tables/copilot/model-release-status.yml";
     private const string SupportedPlansUrl = "https://raw.githubusercontent.com/github/docs/main/data/tables/copilot/model-supported-plans.yml";
+    private const string ModelsAndPricingUrl = "https://raw.githubusercontent.com/github/docs/main/data/tables/copilot/models-and-pricing.yml";
 
     private readonly HttpClient httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
@@ -67,7 +68,27 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
             return new ModelCatalogFetchResult(null, problems);
         }
 
-        return new ModelCatalogFetchResult(new CopilotModelCatalog(models, planAvailability, DateTimeOffset.UtcNow), problems);
+        // Best-effort only: categories power the suggested-model feature, not the core
+        // model/plan-availability lists, so a failure here never fails the whole fetch.
+        var categories = new List<CopilotModelCategory>();
+        var pricingText = await this.DownloadTextAsync(ModelsAndPricingUrl, problems, cancellationToken).ConfigureAwait(false);
+        if (pricingText is not null)
+        {
+            try
+            {
+                categories = FlatYamlListParser.Parse(pricingText)
+                    .Select(record => new CopilotModelCategory(RequireField(record, "model"), RequireField(record, "category")))
+                    .GroupBy(category => category.Model, StringComparer.Ordinal)
+                    .Select(group => group.First())
+                    .ToList();
+            }
+            catch (FormatException exception)
+            {
+                problems.Add($"The model category list format has changed upstream and could not be read: {exception.Message}");
+            }
+        }
+
+        return new ModelCatalogFetchResult(new CopilotModelCatalog(models, planAvailability, categories, DateTimeOffset.UtcNow), problems);
     }
 
     private async Task<string?> DownloadTextAsync(string url, List<string> problems, CancellationToken cancellationToken)
