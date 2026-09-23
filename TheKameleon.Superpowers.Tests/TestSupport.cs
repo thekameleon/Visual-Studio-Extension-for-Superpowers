@@ -1,4 +1,6 @@
+using System.Text;
 using TheKameleon.Superpowers.Core.Contracts.Catalog;
+using TheKameleon.Superpowers.Skills.Install;
 
 namespace TheKameleon.Superpowers.Tests;
 
@@ -41,5 +43,27 @@ internal static class TestSupport
             IsPrerelease = prerelease,
             PublishedAtUtc = published,
         };
+    }
+
+    public static SkillPackage Skill(string name, params (string Path, string Content)[] extraFiles)
+    {
+        var files = new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["SKILL.md"] = Encoding.UTF8.GetBytes($"---\nname: {name}\ndescription: Use when testing {name}.\n---\n\nBody of {name}.\n"),
+        };
+        foreach (var (path, content) in extraFiles)
+        {
+            files[path] = Encoding.UTF8.GetBytes(content);
+        }
+
+        return new SkillPackage(name, files);
+    }
+
+    public static SkillPackage SkillWithMarkdown(string folderName, string skillMarkdown)
+    {
+        return new SkillPackage(folderName, new Dictionary<string, byte[]>(StringComparer.Ordinal)
+        {
+            ["SKILL.md"] = Encoding.UTF8.GetBytes(skillMarkdown),
+        });
     }
 }
