@@ -130,8 +130,12 @@ public sealed class SkillInstaller(ProfilePaths paths)
         }
 
         var newNames = packages.Select(package => package.Name).ToHashSet(StringComparer.Ordinal);
-        issues.AddRange(Remove(owned.Where(skill => !newNames.Contains(skill.Name)).ToArray()));
-        return new SkillInstallOutcome(true, installed, issues, null);
+        var toRemove = owned.Where(skill => !newNames.Contains(skill.Name)).ToArray();
+        var removeIssues = Remove(toRemove);
+        issues.AddRange(removeIssues);
+        var failedToRemove = removeIssues.Where(issue => issue.Kind == SkillIssueKind.RemovalFailed).Select(issue => issue.SkillName).ToHashSet(StringComparer.Ordinal);
+        var stillOwned = installed.Concat(toRemove.Where(skill => failedToRemove.Contains(skill.Name))).ToArray();
+        return new SkillInstallOutcome(true, stillOwned, issues, null);
     }
 
     public IReadOnlyList<SkillIssue> Remove(IReadOnlyList<InstalledSkill> owned)

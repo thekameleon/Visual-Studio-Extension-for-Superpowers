@@ -45,6 +45,11 @@ public sealed class StatusProbe(ProfilePaths paths)
     private StatusCheck SkillsCheck(InstallState state)
     {
         var installer = new SkillInstaller(paths);
+        if (state.Skills.Count == 0)
+        {
+            return new StatusCheck("Skills", StatusLevel.Fail, $"No skills from {state.Release!.Tag} could be installed — every skill folder already existed and was not created by Superpowers. If you already installed these skills another way (for example for GitHub Copilot CLI), use Repair to adopt matching folders.");
+        }
+
         var missing = state.Skills.Where(skill => !Directory.Exists(Path.Combine(paths.SkillsRoot, skill.Name))).Select(skill => skill.Name).ToArray();
         var edited = state.Skills.Where(installer.IsEdited).Select(skill => skill.Name).ToArray();
         var summary = $"{state.Skills.Count} skills from {state.Release!.Tag} are installed in {paths.SkillsRoot}.";
@@ -74,12 +79,15 @@ public sealed class StatusProbe(ProfilePaths paths)
     private StatusCheck AlwaysOnCheck(InstallState state)
     {
         const string title = "Always-on";
+        var blockPresent = new AlwaysOnInstructionsFile(paths).IsBlockPresent();
         if (!state.AlwaysOn.Enabled)
         {
-            return new StatusCheck(title, StatusLevel.Pass, "Off. Superpowers applies only when you select the Superpowers agent.");
+            return blockPresent
+                ? new StatusCheck(title, StatusLevel.Warning, "Off, but a Superpowers block is still present in copilot-instructions.md. Use Repair or Remove to clean it up.")
+                : new StatusCheck(title, StatusLevel.Pass, "Off. Superpowers applies only when you select the Superpowers agent.");
         }
 
-        return new AlwaysOnInstructionsFile(paths).IsBlockPresent()
+        return blockPresent
             ? new StatusCheck(title, StatusLevel.Pass, "On. Every Agent-mode chat receives the Superpowers bootstrap.")
             : new StatusCheck(title, StatusLevel.Fail, "On, but the block is missing from copilot-instructions.md. Turn always-on off and on again.");
     }

@@ -121,5 +121,44 @@ public sealed class SuperpowersSetupTests : IDisposable
         Assert.Equal(AgentFileWriter.BuildContent(), File.ReadAllText(profile.Paths.AgentFile));
     }
 
+    [Fact]
+    public void OverwriteEditedNeverReplacesAForeignUnrecordedAgentFile()
+    {
+        Directory.CreateDirectory(profile.Paths.AgentsRoot);
+        File.WriteAllText(profile.Paths.AgentFile, "my own unrelated agent file");
+
+        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), overwriteEdited: true);
+
+        Assert.Equal("my own unrelated agent file", File.ReadAllText(profile.Paths.AgentFile));
+        Assert.Null(result.State.AgentFile);
+    }
+
+    [Fact]
+    public void RepairReconcilesAlwaysOnFromThePhysicalFileWhenRecordWasLost()
+    {
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
+        Setup.SetAlwaysOn(true);
+        File.WriteAllText(profile.Paths.StateFile, "{ broken");
+
+        var repaired = Setup.Repair(Release, Source(TestSupport.Skill("alpha")));
+
+        Assert.True(repaired.State.AlwaysOn.Enabled);
+    }
+
+    [Fact]
+    public void RemoveDisablesAlwaysOnEvenWhenTheRecordSaysItIsOff()
+    {
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
+        Setup.SetAlwaysOn(true);
+        // Simulate a lost/reset record where the block is still physically present but not tracked as enabled.
+        File.WriteAllText(profile.Paths.StateFile, "{ broken");
+        Setup.Repair(Release, Source(TestSupport.Skill("alpha")));
+
+        var result = Setup.Remove();
+
+        Assert.Equal(SetupStatus.Succeeded, result.Status);
+        Assert.False(File.Exists(profile.Paths.UserInstructionsFile) && File.ReadAllText(profile.Paths.UserInstructionsFile).Contains("superpowers:begin", StringComparison.Ordinal));
+    }
+
     public void Dispose() => profile.Dispose();
 }

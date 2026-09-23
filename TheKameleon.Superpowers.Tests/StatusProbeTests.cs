@@ -1,3 +1,4 @@
+using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
 using TheKameleon.Superpowers.Skills.Setup;
 using TheKameleon.Superpowers.Skills.Status;
@@ -105,6 +106,31 @@ public sealed class StatusProbeTests : IDisposable
         Directory.CreateDirectory(logs);
         File.WriteAllText(Path.Combine(logs, "a_VSGitHubCopilot.chat.log"), "unrelated");
         Assert.Equal(StatusLevel.Unknown, CopilotLogDiagnostic.Diagnose(logs, profile.Paths).Level);
+    }
+
+    [Fact]
+    public void AlwaysOnWarnsWhenBlockIsPresentButRecordSaysOff()
+    {
+        Install();
+        new AlwaysOnInstructionsFile(profile.Paths).Enable(new AlwaysOnState(false, false));
+
+        var check = Assert.Single(Run(), check => check.Title == "Always-on");
+
+        Assert.Equal(StatusLevel.Warning, check.Level);
+    }
+
+    [Fact]
+    public void SkillsFailsWhenNothingCouldBeInstalledDueToConflicts()
+    {
+        Directory.CreateDirectory(Path.Combine(profile.Paths.SkillsRoot, "alpha"));
+        new SuperpowersSetup(profile.Paths).Install(
+            new InstalledRelease("v1.0.0", "abc", "bundled"),
+            new SkillArchiveReadResult(new[] { TestSupport.Skill("alpha") }, Array.Empty<string>()),
+            overwriteEdited: false);
+
+        var check = Assert.Single(Run(), check => check.Title == "Skills");
+
+        Assert.Equal(StatusLevel.Fail, check.Level);
     }
 
     public void Dispose() => profile.Dispose();

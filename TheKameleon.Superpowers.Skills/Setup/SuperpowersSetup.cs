@@ -52,7 +52,9 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
     {
         using var _ = InstallLock.Acquire(LockTimeout);
         var load = store.Load();
-        var known = load.Status == InstallStateStatus.Loaded ? load.State : InstallState.Empty;
+        var known = load.Status == InstallStateStatus.Loaded
+            ? load.State
+            : InstallState.Empty with { AlwaysOn = new AlwaysOnState(alwaysOn.IsBlockPresent(), false) };
         var knownNames = known.Skills.Select(skill => skill.Name).ToHashSet(StringComparer.Ordinal);
         var adopted = source.Skills
             .Where(package => !knownNames.Contains(package.Name) && skills.MatchesPackage(package))
@@ -82,7 +84,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             messages.Add("Your edited superpowers.agent.md was left in place.");
         }
 
-        if (load.State.AlwaysOn.Enabled && alwaysOn.Disable(load.State.AlwaysOn).Status == AlwaysOnStatus.MalformedMarkers)
+        if (alwaysOn.IsBlockPresent() && alwaysOn.Disable(load.State.AlwaysOn).Status == AlwaysOnStatus.MalformedMarkers)
         {
             messages.Add("The always-on block in copilot-instructions.md has damaged markers; remove it by hand.");
         }
@@ -142,7 +144,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Failed, messages, seed);
         }
 
-        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited);
+        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited && seed.AgentFile is not null);
         if (agentOutcome.Status == AgentFileStatus.EditedKept)
         {
             messages.Add("Your edited superpowers.agent.md was kept.");
