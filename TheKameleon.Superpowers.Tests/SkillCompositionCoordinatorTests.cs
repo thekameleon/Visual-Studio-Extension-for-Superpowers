@@ -149,4 +149,56 @@ public sealed class SkillCompositionCoordinatorTests
             executionMode: ExecutionMode.Guided,
             state: AdapterRunState.Created);
     }
+
+    [Theory]
+    [InlineData("Execute")]
+    [InlineData("Debug")]
+    [InlineData("TDD")]
+    [InlineData("Review")]
+    [InlineData("Verify")]
+    [InlineData("Refactor")]
+    [InlineData("Finish")]
+    public void ComposeEntryPointResolvesEachWiredEntryPoint(string entryPointId)
+    {
+        var skill = CreateSkill(entryPointId, $"skills/{entryPointId.ToLowerInvariant()}/SKILL.md");
+        var entryPointMetadata = new PlanEntryPointMetadata(
+            entryPointId,
+            "https://github.com/obra/superpowers",
+            "v6.4.1",
+            new[]
+            {
+                new PlanCompositionStep(1, skill.RelativePath, "Step purpose")
+            });
+
+        var release = new LoadedCatalogRelease(
+            "v6.4.1",
+            "commit",
+            "MIT",
+            new AdapterManifest(1, Array.Empty<AdapterManifestAction>(), Array.Empty<ParseDiagnostic>()),
+            null,
+            new[] { skill },
+            Array.Empty<string>(),
+            Array.Empty<ParseDiagnostic>(),
+            new Dictionary<string, PlanEntryPointMetadata> { [entryPointId] = entryPointMetadata });
+
+        var run = CreateRun();
+        var result = SkillCompositionCoordinator.ComposeEntryPoint(release, run, entryPointId, Array.Empty<AcceptedPlanTask>(), Array.Empty<CapabilitySnapshot>());
+
+        Assert.False(result.HasErrors);
+        Assert.NotNull(result.Composition);
+        Assert.Equal(entryPointId, result.Composition!.EntryPoint);
+        Assert.Single(result.Composition.Steps);
+    }
+
+    [Fact]
+    public void ComposeEntryPointReportsMissingMetadataForUnknownEntryPoint()
+    {
+        var release = CreateRelease();
+        var run = CreateRun();
+
+        var result = SkillCompositionCoordinator.ComposeEntryPoint(release, run, "Unknown", Array.Empty<AcceptedPlanTask>(), Array.Empty<CapabilitySnapshot>());
+
+        Assert.True(result.HasErrors);
+        Assert.Null(result.Composition);
+    }
 }

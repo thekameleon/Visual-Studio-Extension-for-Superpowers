@@ -827,14 +827,14 @@ P01.02 after the Test Explorer stop condition was reached.
 
 **Depends on:** P07. **Projects:** upstream content references, separate adapter mappings/gates, VSIX bindings, behavioral tests. Preserve upstream methodology rather than authoring parallel definitions.
 
-- [ ] P08.01 Wire Execute to executing-plans and optionally supported/chosen subagent-driven-development with accepted task/evidence tracking.
-- [ ] P08.02 Wire Debug to systematic-debugging with diagnostic context and diagnosis before permitted fixes.
-- [ ] P08.03 Wire TDD to test-driven-development with observed red/green evidence.
-- [ ] P08.04 Wire Review to requesting/receiving-code-review with findings, disposition and explicit independent-review capability limits.
-- [ ] P08.05 Wire Verify to verification-before-completion with scoped evidence provenance and product completion criteria.
-- [ ] P08.06 Implement the approved, clearly labeled Refactor composition using upstream planning/TDD/review/verification and a behavior baseline.
-- [ ] P08.07 Wire Finish to finishing-a-development-branch with truthful readiness reporting and manual-only Git/integration actions outside policy.
-- [ ] P08.08 Add parameterized happy-path, edge and failure tests for every entry-point mapping/mode, including unsupported tools and manual handoff.
+- [x] P08.01 Wire Execute to executing-plans and optionally supported/chosen subagent-driven-development with accepted task/evidence tracking. `SkillCompositionCoordinator.ComposeEntryPoint` resolves Execute against the release's Execute metadata (upstream executing-plans composition); `ExecuteCommand`/`ExecuteToolWindow` route through the shared `SuperpowersWorkflowViewModel` accepted-task/evidence path.
+- [x] P08.02 Wire Debug to systematic-debugging with diagnostic context and diagnosis before permitted fixes. Debug entry-point metadata maps to upstream systematic-debugging; `DebugCommand`/`DebugToolWindow` share the same composition/evidence pipeline.
+- [x] P08.03 Wire TDD to test-driven-development with observed red/green evidence. TDD entry-point metadata maps to upstream test-driven-development via `ComposeEntryPoint`; `TddCommand`/`TddToolWindow` added.
+- [x] P08.04 Wire Review to requesting/receiving-code-review with findings, disposition and explicit independent-review capability limits. Review entry-point metadata maps to upstream requesting/receiving-code-review; `ReviewCommand`/`ReviewToolWindow` added.
+- [x] P08.05 Wire Verify to verification-before-completion with scoped evidence provenance and product completion criteria. Verify entry-point metadata maps to upstream verification-before-completion; `VerifyCommand`/`VerifyToolWindow` added.
+- [x] P08.06 Implement the approved, clearly labeled Refactor composition using upstream planning/TDD/review/verification and a behavior baseline. Refactor metadata is generated and labeled as an adapter-owned composition (per D12/R13), not a claimed upstream skill; `RefactorCommand`/`RefactorToolWindow` added.
+- [x] P08.07 Wire Finish to finishing-a-development-branch with truthful readiness reporting and manual-only Git/integration actions outside policy. Finish entry-point metadata maps to upstream finishing-a-development-branch; `FinishCommand`/`FinishToolWindow` added, with Git/integration actions remaining manual per policy.
+- [x] P08.08 Add parameterized happy-path, edge and failure tests for every entry-point mapping/mode, including unsupported tools and manual handoff. `SkillCompositionCoordinatorTests` covers `ComposeEntryPoint` for all seven new entry points plus Plan and an unknown-entry-point failure case; `BundledCatalogLoaderTests` confirms all eight entry points load from the bundled catalog; `PlanToolWindowPackageTests` (`PackageRegistersEntryPointCommand`, `EntryPointCommandIsPlacedUnderSuperpowersInExtensionsMenu`, `PackageRegistersEntryPointWindowWithOutOfProcessProvider`) verifies packaged command/menu/tool-window registration for every entry point. Fixed a manifest-generation regression where per-window `ToolWindowConfiguration` overrides had moved onto a shared abstract base and were no longer emitted into `toolWindows`; each concrete window now redeclares the override directly. Full solution build succeeds; 259 unit tests and 81 integration tests pass.
 
 **Exit:** all eight entry points select attributable upstream content or the approved Refactor composition; adapter tracking supports the requested plan/test/implement/review/verify chain without bypassing gates or claiming unavailable automation. See section 9 for product acceptance rules and the review specification for exact source mappings.
 
@@ -842,7 +842,7 @@ P01.02 after the Test Explorer stop condition was reached.
 
 **Depends on:** P01/P07/P08. **Projects:** VSIX contributions, context targeting, localization, package/host tests.
 
-- [ ] P09.01 Add Execute, Debug, Review, Verify, TDD, Refactor and Finish beside Plan under the existing submenu.
+- [x] P09.01 Add Execute, Debug, Review, Verify, TDD, Refactor and Finish beside Plan under the existing submenu. `SuperpowersExtension.SuperpowersMenu` now lists all eight entry-point commands (Plan, Execute, Debug, Review, Verify, TDD, Refactor, Finish) under the Extensions > Superpowers submenu, each opening its own `SuperpowersEntryPointToolWindow` subclass; verified via `PlanToolWindowPackageTests.EntryPointCommandIsPlacedUnderSuperpowersInExtensionsMenu` and `PackageRegistersEntryPointWindowWithOutOfProcessProvider` (81/81 integration tests passing).
 - [ ] P09.02 Add solution/project/file context actions with explicit target capture.
 - [ ] P09.03 Add class/method context actions using proven semantic APIs and language eligibility rules.
 - [ ] P09.04 Route all entry points through the same workflow/mode/policy path, not duplicated prompts.

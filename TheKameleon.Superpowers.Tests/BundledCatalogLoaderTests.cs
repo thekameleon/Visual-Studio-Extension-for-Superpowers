@@ -34,6 +34,14 @@ public sealed class BundledCatalogLoaderTests : IDisposable
         Assert.Equal(2, latest.PlanMetadata.Composition.Count);
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/brainstorming/SKILL.md");
         Assert.Contains(latest.Skills, skill => skill.RelativePath == "skills/writing-plans/SKILL.md");
+
+        foreach (var entryPointId in new[] { "Plan", "Execute", "Debug", "TDD", "Review", "Verify", "Refactor", "Finish" })
+        {
+            var entryPointMetadata = latest.GetEntryPoint(entryPointId);
+            Assert.True(entryPointMetadata is not null, $"Release '{latest.ReleaseTag}' is missing entry point '{entryPointId}'.");
+            Assert.Equal(entryPointId, entryPointMetadata!.EntryPoint);
+            Assert.NotEmpty(entryPointMetadata.Composition);
+        }
     }
 
     [Fact]

@@ -11,33 +11,48 @@ public static class SkillCompositionCoordinator
         IReadOnlyList<AcceptedPlanTask> acceptedTasks,
         IReadOnlyList<CapabilitySnapshot> capabilities)
     {
+        return ComposeEntryPoint(release, run, "Plan", acceptedTasks, capabilities);
+    }
+
+    /// <summary>
+    /// Resolves a run composition for any wired entry point (Plan, Execute, Debug, TDD, Review,
+    /// Verify, Refactor, Finish) using the metadata declared for that entry point in the release.
+    /// </summary>
+    public static CompositionResolutionResult ComposeEntryPoint(
+        LoadedCatalogRelease release,
+        AdapterRunRecord run,
+        string entryPointId,
+        IReadOnlyList<AcceptedPlanTask> acceptedTasks,
+        IReadOnlyList<CapabilitySnapshot> capabilities)
+    {
         ArgumentNullException.ThrowIfNull(release);
         ArgumentNullException.ThrowIfNull(run);
+        ArgumentException.ThrowIfNullOrWhiteSpace(entryPointId);
         ArgumentNullException.ThrowIfNull(acceptedTasks);
         ArgumentNullException.ThrowIfNull(capabilities);
 
         var diagnostics = new List<ParseDiagnostic>();
-        var planMetadata = release.PlanMetadata;
-        if (planMetadata is null)
+        var entryPointMetadata = release.GetEntryPoint(entryPointId);
+        if (entryPointMetadata is null)
         {
-            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN101", $"Release '{release.ReleaseTag}' does not include plan composition metadata."));
+            diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN101", $"Release '{release.ReleaseTag}' does not include '{entryPointId}' composition metadata."));
             return new CompositionResolutionResult(null, run, diagnostics);
         }
 
         var steps = new List<ComposedSkillStep>();
         var visitedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var step in planMetadata.Composition)
+        foreach (var step in entryPointMetadata.Composition)
         {
             if (!visitedPaths.Add(step.SkillPath))
             {
-                diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN102", $"Plan composition contains a duplicate or cyclic skill reference '{step.SkillPath}'."));
+                diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN102", $"'{entryPointId}' composition contains a duplicate or cyclic skill reference '{step.SkillPath}'."));
                 continue;
             }
 
             var skill = release.Skills.FirstOrDefault(candidate => string.Equals(candidate.RelativePath, step.SkillPath, StringComparison.OrdinalIgnoreCase));
             if (skill is null)
             {
-                diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN103", $"Plan composition step '{step.SkillPath}' was not loaded from release '{release.ReleaseTag}'."));
+                diagnostics.Add(new ParseDiagnostic(ParseDiagnosticSeverity.Error, "SPRUN103", $"'{entryPointId}' composition step '{step.SkillPath}' was not loaded from release '{release.ReleaseTag}'."));
                 continue;
             }
 
@@ -46,7 +61,7 @@ public static class SkillCompositionCoordinator
 
         var handoff = ResolveHandoff(capabilities);
         diagnostics.AddRange(ValidateAcceptedTasks(acceptedTasks));
-        var composition = new SkillCompositionRecord(planMetadata.EntryPoint, steps, acceptedTasks, handoff);
+        var composition = new SkillCompositionRecord(entryPointMetadata.EntryPoint, steps, acceptedTasks, handoff);
         var resultingRun = new AdapterRunRecord(
             run.RunId,
             run.SelectedReleaseTag,

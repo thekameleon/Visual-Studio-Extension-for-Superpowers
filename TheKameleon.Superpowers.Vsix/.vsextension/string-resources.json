@@ -4,6 +4,13 @@
   "Superpowers.ClearDiagnosticProbeCommand.DisplayName": "Clear Probe Diagnostic",
   "Superpowers.ContextProbeCommand.DisplayName": "Probe Context",
   "Superpowers.PlanCommand.DisplayName": "Plan",
+  "Superpowers.ExecuteCommand.DisplayName": "Execute",
+  "Superpowers.DebugCommand.DisplayName": "Debug",
+  "Superpowers.TddCommand.DisplayName": "TDD",
+  "Superpowers.ReviewCommand.DisplayName": "Review",
+  "Superpowers.VerifyCommand.DisplayName": "Verify",
+  "Superpowers.RefactorCommand.DisplayName": "Refactor",
+  "Superpowers.FinishCommand.DisplayName": "Finish",
   "Superpowers.PublishDiagnosticProbeCommand.DisplayName": "Publish Probe Diagnostic",
   "Superpowers.Menu.DisplayName": "Superpowers"
 }

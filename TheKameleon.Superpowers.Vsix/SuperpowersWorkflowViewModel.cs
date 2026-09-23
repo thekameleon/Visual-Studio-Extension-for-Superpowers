@@ -51,10 +51,12 @@ namespace TheKameleon.Superpowers.Vsix
         private string? workspaceDirectory;
         private string historySearchText = string.Empty;
         private string handoffStatusText = "No composition available yet.";
+        private string entryPointId = "Plan";
 
-        public SuperpowersWorkflowViewModel(VisualStudioExtensibility extensibility)
+        public SuperpowersWorkflowViewModel(VisualStudioExtensibility extensibility, string entryPointId = "Plan")
         {
             this.extensibility = extensibility ?? throw new ArgumentNullException(nameof(extensibility));
+            this.entryPointId = string.IsNullOrWhiteSpace(entryPointId) ? "Plan" : entryPointId;
 
             this.ReleaseVersions = new ObservableList<string>();
             this.SkillNames = new ObservableList<string>();
@@ -239,6 +241,14 @@ namespace TheKameleon.Superpowers.Vsix
             private set => this.SetProperty(ref this.canControlRun, value);
         }
 
+        /// <summary>
+        /// The entry point this workflow surface is wired to ("Plan", "Execute", "Debug", "TDD",
+        /// "Review", "Verify", "Refactor" or "Finish"). Determines which release composition
+        /// metadata is resolved; the UI/composition logic itself is not duplicated per entry point.
+        /// </summary>
+        [DataMember]
+        public string EntryPointId => this.entryPointId;
+
         public async Task InitializeAsync(CancellationToken cancellationToken)
         {
             await this.LoadCatalogAsync(cancellationToken).ConfigureAwait(false);
@@ -331,9 +341,11 @@ namespace TheKameleon.Superpowers.Vsix
         }
 
         /// <summary>
-        /// Composes the Plan sequence (e.g. upstream brainstorming/writing-plans) for the current
-        /// release/run when the release declares plan composition metadata, exposing composed
-        /// steps and handoff status honestly rather than inventing a generic sequence.
+        /// Composes the sequence for the current entry point (e.g. Plan's upstream
+        /// brainstorming/writing-plans, or Execute's executing-plans) for the current
+        /// release/run when the release declares composition metadata for that entry point,
+        /// exposing composed steps and handoff status honestly rather than inventing a generic
+        /// sequence.
         /// </summary>
         private void ComposePlanIfSupported()
         {
@@ -346,10 +358,10 @@ namespace TheKameleon.Superpowers.Vsix
                 return;
             }
 
-            if (this.selectedRelease.PlanMetadata is null)
+            if (this.selectedRelease.GetEntryPoint(this.entryPointId) is null)
             {
                 this.composition = null;
-                this.HandoffStatusText = $"Release '{this.selectedRelease.ReleaseTag}' does not declare Plan composition metadata (brainstorming/writing-plans).";
+                this.HandoffStatusText = $"Release '{this.selectedRelease.ReleaseTag}' does not declare '{this.entryPointId}' composition metadata.";
                 return;
             }
 
@@ -358,7 +370,7 @@ namespace TheKameleon.Superpowers.Vsix
                 new CapabilitySnapshot("copilot-handoff", CapabilityAvailability.ManualOnly, HandoffFallbackKind.PreviewCopy, detail: "Preview/copy manual handoff (see P06)."),
             };
 
-            var result = SkillCompositionCoordinator.ComposePlan(this.selectedRelease, this.currentRun, this.acceptedPlanTasks.ToArray(), capabilities);
+            var result = SkillCompositionCoordinator.ComposeEntryPoint(this.selectedRelease, this.currentRun, this.entryPointId, this.acceptedPlanTasks.ToArray(), capabilities);
             this.currentRun = result.Run;
             this.composition = result.Composition;
 
@@ -372,7 +384,7 @@ namespace TheKameleon.Superpowers.Vsix
 
             if (result.Diagnostics.Any())
             {
-                this.StatusText = "Plan composition: " + string.Join(" ", result.Diagnostics.Select(diagnostic => diagnostic.Message));
+                this.StatusText = $"{this.entryPointId} composition: " + string.Join(" ", result.Diagnostics.Select(diagnostic => diagnostic.Message));
             }
         }
 

@@ -95,7 +95,17 @@ public static class BundledCatalogLoader
             ? new AdapterManifest(0, Array.Empty<AdapterManifestAction>(), diagnostics.Where(diagnostic => diagnostic.Code == "SPCAT412").ToArray())
             : AdapterManifestParser.Parse(adapterText);
 
-        var planMetadata = LoadPlanMetadata(source, releaseTag, release.PlanMetadataPath, diagnostics);
+        var planMetadata = LoadEntryPointMetadata(source, releaseTag, release.PlanMetadataPath, diagnostics);
+
+        var entryPoints = new Dictionary<string, PlanEntryPointMetadata>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (entryPointId, metadataPath) in release.EntryPointMetadataPaths ?? new Dictionary<string, string>())
+        {
+            var entryPointMetadata = LoadEntryPointMetadata(source, releaseTag, metadataPath, diagnostics);
+            if (entryPointMetadata is not null)
+            {
+                entryPoints[entryPointId] = entryPointMetadata;
+            }
+        }
 
         var provenanceText = ReadRequiredText(source, release.ProvenancePath, diagnostics, "SPCAT413", $"Release '{releaseTag}' is missing its provenance metadata.", MaxProvenanceLength);
         ProvenanceModel? provenance = null;
@@ -140,10 +150,11 @@ public static class BundledCatalogLoader
             planMetadata,
             skills,
             assets.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
-            diagnostics);
+            diagnostics,
+            entryPoints);
     }
 
-    private static PlanEntryPointMetadata? LoadPlanMetadata(
+    private static PlanEntryPointMetadata? LoadEntryPointMetadata(
         ICatalogSource source,
         string releaseTag,
         string? planMetadataPath,
@@ -373,7 +384,13 @@ public static class BundledCatalogLoader
 
             if (segment == "..")
             {
-                return null;
+                if (segments.Count == 0)
+                {
+                    return null;
+                }
+
+                segments.RemoveAt(segments.Count - 1);
+                continue;
             }
 
             segments.Add(segment);
@@ -580,6 +597,8 @@ public static class BundledCatalogLoader
         public string? PlanMetadataPath { get; init; }
 
         public string? ProvenancePath { get; init; }
+
+        public Dictionary<string, string>? EntryPointMetadataPaths { get; init; }
     }
 
     private sealed class PlanMetadataModel

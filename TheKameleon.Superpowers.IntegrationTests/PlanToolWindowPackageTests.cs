@@ -98,15 +98,23 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.Equal(menu.GetProperty("name").GetString(), groupPlacement.GetProperty("parent").GetProperty("parentName").GetString());
         }
 
-        [Fact]
-        public void PackageRegistersOneSuperpowersWindowWithOutOfProcessProvider()
+        [Theory]
+        [InlineData("SuperpowersToolWindow")]
+        [InlineData("ExecuteToolWindow")]
+        [InlineData("DebugToolWindow")]
+        [InlineData("TddToolWindow")]
+        [InlineData("ReviewToolWindow")]
+        [InlineData("VerifyToolWindow")]
+        [InlineData("RefactorToolWindow")]
+        [InlineData("FinishToolWindow")]
+        public void PackageRegistersEntryPointWindowWithOutOfProcessProvider(string typeName)
         {
             using var package = OpenPackage();
             using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
             using var registration = JsonDocument.Parse(stream);
             var root = registration.RootElement;
             var window = Assert.Single(root.GetProperty("toolWindows").EnumerateArray(), candidate =>
-                candidate.GetProperty("identifier").GetString() == "TheKameleon.Superpowers.Vsix.SuperpowersToolWindow");
+                candidate.GetProperty("identifier").GetString() == $"TheKameleon.Superpowers.Vsix.{typeName}");
             Assert.Equal("DocumentWell", window.GetProperty("placement").GetString());
             Assert.True(window.GetProperty("allowAutoCreation").GetBoolean());
             var provider = Assert.Single(root.GetProperty("services").EnumerateArray(), service =>
@@ -125,7 +133,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var textValues = view.Descendants(presentation + "TextBlock")
                 .Select(element => (string?)element.Attribute("Text"))
                 .ToArray();
-            Assert.Contains("Superpowers Plan workflow", textValues);
+            Assert.Contains("{Binding EntryPointId, StringFormat='Superpowers {0} workflow'}", textValues);
             Assert.Contains("{Binding StatusText}", textValues);
             Assert.Contains("{Binding RunStateText}", textValues);
 
@@ -272,5 +280,53 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.NotNull(entry);
             return entry.Open();
         }
+            [Theory]
+            [InlineData("ExecuteCommand", "Superpowers.ExecuteCommand.DisplayName", "Execute")]
+            [InlineData("DebugCommand", "Superpowers.DebugCommand.DisplayName", "Debug")]
+            [InlineData("TddCommand", "Superpowers.TddCommand.DisplayName", "TDD")]
+            [InlineData("ReviewCommand", "Superpowers.ReviewCommand.DisplayName", "Review")]
+            [InlineData("VerifyCommand", "Superpowers.VerifyCommand.DisplayName", "Verify")]
+            [InlineData("RefactorCommand", "Superpowers.RefactorCommand.DisplayName", "Refactor")]
+            [InlineData("FinishCommand", "Superpowers.FinishCommand.DisplayName", "Finish")]
+            public void PackageRegistersEntryPointCommand(string typeName, string resourceId, string displayName)
+            {
+                using var package = OpenPackage();
+                using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
+                using var registration = JsonDocument.Parse(stream);
+                var commands = registration.RootElement.GetProperty("commandSets").EnumerateArray()
+                    .SelectMany(commandSet => commandSet.GetProperty("commands").EnumerateArray());
+
+                var command = Assert.Single(commands, command =>
+                    command.GetProperty("name").GetString() == $"TheKameleon.Superpowers.Vsix.{typeName}");
+                AssertLocalizedDisplayName(package, command, resourceId, displayName);
+                Assert.Equal("None", command.GetProperty("flags").GetString());
+            }
+
+            [Theory]
+            [InlineData("ExecuteCommand")]
+            [InlineData("DebugCommand")]
+            [InlineData("TddCommand")]
+            [InlineData("ReviewCommand")]
+            [InlineData("VerifyCommand")]
+            [InlineData("RefactorCommand")]
+            [InlineData("FinishCommand")]
+            public void EntryPointCommandIsPlacedUnderSuperpowersInExtensionsMenu(string typeName)
+            {
+                using var package = OpenPackage();
+                using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
+                using var registration = JsonDocument.Parse(stream);
+                var root = registration.RootElement;
+                var menu = Assert.Single(root.GetProperty("controlContainers").EnumerateArray(), container =>
+                    container.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.SuperpowersExtension.SuperpowersMenu");
+
+                var placements = root.GetProperty("controlPlacements").EnumerateArray().ToArray();
+                var commandPlacement = Assert.Single(placements, placement =>
+                    placement.GetProperty("controlName").GetString() == $"TheKameleon.Superpowers.Vsix.{typeName}");
+                var groupName = commandPlacement.GetProperty("parent").GetProperty("parentName").GetString();
+                var groupPlacement = Assert.Single(placements, placement =>
+                    placement.GetProperty("controlName").GetString() == groupName);
+                Assert.Equal(menu.GetProperty("name").GetString(), groupPlacement.GetProperty("parent").GetProperty("parentName").GetString());
+            }
+
+        }
     }
-}

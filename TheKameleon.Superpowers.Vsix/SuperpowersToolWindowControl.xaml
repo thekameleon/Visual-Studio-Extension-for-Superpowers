@@ -7,7 +7,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <TextBlock Text="Superpowers Plan workflow"
+                <TextBlock Text="{Binding EntryPointId, StringFormat='Superpowers {0} workflow'}"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap" />
 
@@ -65,7 +65,7 @@
                          MinHeight="160"
                          VerticalScrollBarVisibility="Auto" />
 
-                <TextBlock Text="Plan composition (upstream brainstorming/writing-plans)"
+                <TextBlock Text="{Binding EntryPointId, StringFormat='{}{0} composition (upstream skill sequence)'}"
                            Margin="0,8,0,4"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap" />

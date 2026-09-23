@@ -35,6 +35,27 @@ public sealed class SkillDocumentParserTests
     }
 
     [Fact]
+    public void AllowsSiblingSkillDirectoryReference()
+    {
+        // Upstream cross-skill references such as executing-plans -> ../requesting-code-review/code-reviewer.md
+        // must remain supported. True path-escape containment is enforced later, at archive-relative
+        // resolution, where the escaped path can be checked against the release root.
+        const string content = """
+        ---
+        name: Plan
+        description: Create a plan.
+        ---
+        Use [reference](../requesting-code-review/code-reviewer.md).
+        """;
+
+        var result = SkillDocumentParser.Parse(content);
+
+        Assert.False(result.HasErrors);
+        Assert.Single(result.References);
+        Assert.Equal("../requesting-code-review/code-reviewer.md", result.References[0].RelativePath);
+    }
+
+    [Fact]
     public void RejectsUnsafeReference()
     {
         const string content = """
@@ -42,7 +63,7 @@ public sealed class SkillDocumentParserTests
         name: Plan
         description: Create a plan.
         ---
-        Use [reference](../outside.md).
+        Use [reference](C:\outside.md).
         """;
 
         var result = SkillDocumentParser.Parse(content);
