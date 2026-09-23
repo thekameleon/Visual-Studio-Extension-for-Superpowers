@@ -94,6 +94,30 @@ namespace TheKameleon.Superpowers.IntegrationTests
                 (string?)dependency.Attribute("Id") == "Microsoft.Framework.NDP");
         }
 
+        [Fact]
+        public void ManifestDeclaresIconAndPreviewImageThatArePackaged()
+        {
+            using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, PackageName));
+            var manifest = ReadManifest(package);
+            var metadata = Assert.Single(manifest.Descendants(ManifestNamespace + "Metadata"));
+
+            foreach (var element in new[] { "Icon", "PreviewImage" })
+            {
+                var path = (string?)metadata.Element(ManifestNamespace + element);
+                Assert.False(string.IsNullOrWhiteSpace(path), $"Manifest must declare <{element}>.");
+                Assert.NotNull(package.GetEntry(path!.Replace('\\', '/')));
+            }
+        }
+
+        [Fact]
+        public void PackageContainsCommandIconImages()
+        {
+            using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, PackageName));
+
+            Assert.Contains(package.Entries, entry => entry.FullName.EndsWith("Superpowers.16.16.png", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(package.Entries, entry => entry.FullName.EndsWith("Superpowers.20.20.png", StringComparison.OrdinalIgnoreCase));
+        }
+
         private static ZipArchive OpenPackage()
         {
             var path = Path.Combine(AppContext.BaseDirectory, PackageName);

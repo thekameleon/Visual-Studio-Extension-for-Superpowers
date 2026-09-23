@@ -27,6 +27,8 @@ namespace TheKameleon.Superpowers.Vsix
                 description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio 2026.")
             {
                 InstallationTargetVersion = "[18.5,)",
+                Icon = "Resources\\icon.png",
+                PreviewImage = "Resources\\preview.png",
             },
         };
     }

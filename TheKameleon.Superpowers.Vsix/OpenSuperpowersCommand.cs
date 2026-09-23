@@ -8,7 +8,10 @@ namespace TheKameleon.Superpowers.Vsix
     [VisualStudioContribution]
     public sealed class OpenSuperpowersCommand : Command
     {
-        public override CommandConfiguration CommandConfiguration => new("%Superpowers.OpenCommand.DisplayName%");
+        public override CommandConfiguration CommandConfiguration => new("%Superpowers.OpenCommand.DisplayName%")
+        {
+            Icon = new(ImageMoniker.Custom("Superpowers"), IconSettings.IconAndText),
+        };
 
         public override async Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)
         {

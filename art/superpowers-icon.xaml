@@ -1,0 +1,12 @@
+<Canvas xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Width="32" Height="32">
+    <Rectangle Canvas.Left="1" Canvas.Top="1" Width="30" Height="30" RadiusX="7" RadiusY="7">
+        <Rectangle.Fill>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#6D3BEA" Offset="0" />
+                <GradientStop Color="#3A1C9C" Offset="1" />
+            </LinearGradientBrush>
+        </Rectangle.Fill>
+    </Rectangle>
+    <Path Data="M18.5,3.5 L8,18 L14.5,18 L12.5,28.5 L24,13 L17.5,13 Z"
+          Fill="#FFD43B" Stroke="#1B1037" StrokeThickness="1.2" StrokeLineJoin="Round" />
+</Canvas>

@@ -21,6 +21,8 @@
     <EmbeddedResource Include="SuperpowersToolWindowControl.xaml" />
     <Page Remove="SuperpowersToolWindowControl.xaml" />
     <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*" Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" IncludeInVSIX="true" />
+    <Content Include="Resources\icon.png" IncludeInVSIX="true" />
+    <Content Include="Resources\preview.png" IncludeInVSIX="true" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Core\TheKameleon.Superpowers.Core.csproj" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
   </ItemGroup>
