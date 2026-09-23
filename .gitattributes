@@ -4,6 +4,14 @@
 * text=auto
 
 ###############################################################################
+# Vendored, hash-pinned bundled-catalog release content must never be
+# line-ending-normalized: provenance.json pins each file's SHA-256 against
+# the exact bytes committed to git, and CRLF conversion on checkout breaks
+# that pin on Windows.
+###############################################################################
+bundled-catalog/** -text
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by
