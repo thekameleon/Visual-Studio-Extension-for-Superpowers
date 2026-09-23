@@ -29,11 +29,17 @@ public sealed class InstallStateStore(ProfilePaths paths)
         try
         {
             var state = JsonSerializer.Deserialize<InstallState>(File.ReadAllText(paths.StateFile), Options);
-            if (state is null
-                || state.SchemaVersion != InstallState.CurrentSchemaVersion
-                || state.Skills is null
-                || state.AlwaysOn is null
+            if (state is null || state.Skills is null || state.AlwaysOn is null
                 || state.Skills.Any(skill => skill?.Name is null || skill.FileHashes is null))
+            {
+                return new InstallStateLoad(InstallStateStatus.Corrupt, InstallState.Empty);
+            }
+
+            if (state.SchemaVersion == 1)
+            {
+                state = state with { SchemaVersion = InstallState.CurrentSchemaVersion, FunctionAgentFiles = Array.Empty<InstalledFunctionAgentFile>() };
+            }
+            else if (state.SchemaVersion != InstallState.CurrentSchemaVersion)
             {
                 return new InstallStateLoad(InstallStateStatus.Corrupt, InstallState.Empty);
             }

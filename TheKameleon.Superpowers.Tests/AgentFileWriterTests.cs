@@ -1,5 +1,6 @@
 using TheKameleon.Superpowers.Skills.Bootstrap;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 
 namespace TheKameleon.Superpowers.Tests;
 
@@ -86,6 +87,33 @@ public sealed class AgentFileWriterTests : IDisposable
         Assert.True(File.Exists(profile.Paths.AgentFile));
         using var empty = new TempProfile();
         Assert.Equal(AgentFileStatus.Missing, new AgentFileWriter(empty.Paths).Remove(null).Status);
+    }
+
+    [Fact]
+    public void BuildContentOmitsModelFieldWhenNull()
+    {
+        var content = AgentFileWriter.BuildContent(model: null);
+
+        Assert.DoesNotContain("model:", content);
+    }
+
+    [Fact]
+    public void BuildContentIncludesModelFieldWhenProvided()
+    {
+        var content = AgentFileWriter.BuildContent(model: "Claude Opus 5.5");
+
+        Assert.Contains("model: Claude Opus 5.5", content);
+    }
+
+    [Fact]
+    public void WriteFunctionAgentCreatesANamedFileForNonGeneralFunctions()
+    {
+        var outcome = Writer.WriteFunctionAgent(SuperpowersFunction.Review, "GPT-5.4", recorded: null, overwriteEdited: false);
+
+        Assert.Equal(AgentFileStatus.Written, outcome.Status);
+        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
+        Assert.True(File.Exists(path));
+        Assert.Contains("model: GPT-5.4", File.ReadAllText(path));
     }
 
     public void Dispose() => profile.Dispose();

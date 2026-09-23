@@ -1,5 +1,6 @@
 using System.Text;
 using TheKameleon.Superpowers.Skills.Install;
+using TheKameleon.Superpowers.Skills.Models;
 
 namespace TheKameleon.Superpowers.Skills.Bootstrap;
 
@@ -15,14 +16,27 @@ public enum AgentFileStatus
 
 public sealed record AgentFileOutcome(AgentFileStatus Status, InstalledAgentFile? Agent);
 
+public sealed record FunctionAgentFileOutcome(AgentFileStatus Status, InstalledFunctionAgentFile? Agent);
+
 public sealed class AgentFileWriter(ProfilePaths paths)
 {
     private const string Description = "Agent mode with Superpowers skills — brainstorming, planning, TDD, systematic debugging, code review and verification.";
 
-    public static string BuildContent()
+    public static string BuildContent(string? model = null)
     {
-        return "---\nname: Superpowers\ndescription: " + Description + "\n---\n\n" + BootstrapText.Body.ReplaceLineEndings("\n") + "\n";
+        var frontMatter = "---\nname: Superpowers\ndescription: " + Description;
+        if (!string.IsNullOrWhiteSpace(model))
+        {
+            frontMatter += "\nmodel: " + model;
+        }
+
+        return frontMatter + "\n---\n\n" + BootstrapText.Body.ReplaceLineEndings("\n") + "\n";
     }
+
+    public static string FunctionAgentFilePath(ProfilePaths paths, SuperpowersFunction function) =>
+        function == SuperpowersFunction.General
+            ? paths.AgentFile
+            : Path.Combine(paths.AgentsRoot, $"superpowers-{function.ToString().ToLowerInvariant()}.agent.md");
 
     public bool IsEdited(InstalledAgentFile? recorded)
     {
@@ -30,9 +44,9 @@ public sealed class AgentFileWriter(ProfilePaths paths)
             && (recorded is null || !string.Equals(ContentHash.OfFile(paths.AgentFile), recorded.Sha256, StringComparison.OrdinalIgnoreCase));
     }
 
-    public AgentFileOutcome Write(InstalledAgentFile? recorded, bool overwriteEdited)
+    public AgentFileOutcome Write(InstalledAgentFile? recorded, bool overwriteEdited, string? model = null)
     {
-        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent());
+        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(model));
         var hash = ContentHash.Of(content);
         var current = new InstalledAgentFile(hash, BootstrapText.Version);
 
@@ -53,6 +67,56 @@ public sealed class AgentFileWriter(ProfilePaths paths)
         Directory.CreateDirectory(paths.AgentsRoot);
         File.WriteAllBytes(paths.AgentFile, content);
         return new AgentFileOutcome(AgentFileStatus.Written, current);
+    }
+
+    public bool IsFunctionAgentEdited(SuperpowersFunction function, InstalledFunctionAgentFile? recorded)
+    {
+        var path = FunctionAgentFilePath(paths, function);
+        return File.Exists(path)
+            && (recorded is null || !string.Equals(ContentHash.OfFile(path), recorded.Sha256, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public FunctionAgentFileOutcome WriteFunctionAgent(SuperpowersFunction function, string? model, InstalledFunctionAgentFile? recorded, bool overwriteEdited)
+    {
+        var path = FunctionAgentFilePath(paths, function);
+        var content = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(BuildContent(model));
+        var hash = ContentHash.Of(content);
+        var current = new InstalledFunctionAgentFile(function.ToString(), hash, BootstrapText.Version);
+
+        if (File.Exists(path))
+        {
+            var onDisk = ContentHash.OfFile(path);
+            if (string.Equals(onDisk, hash, StringComparison.OrdinalIgnoreCase))
+            {
+                return new FunctionAgentFileOutcome(AgentFileStatus.UpToDate, current);
+            }
+
+            if (IsFunctionAgentEdited(function, recorded) && !overwriteEdited)
+            {
+                return new FunctionAgentFileOutcome(AgentFileStatus.EditedKept, recorded);
+            }
+        }
+
+        Directory.CreateDirectory(paths.AgentsRoot);
+        File.WriteAllBytes(path, content);
+        return new FunctionAgentFileOutcome(AgentFileStatus.Written, current);
+    }
+
+    public FunctionAgentFileOutcome RemoveFunctionAgent(SuperpowersFunction function, InstalledFunctionAgentFile? recorded)
+    {
+        var path = FunctionAgentFilePath(paths, function);
+        if (!File.Exists(path))
+        {
+            return new FunctionAgentFileOutcome(AgentFileStatus.Missing, null);
+        }
+
+        if (IsFunctionAgentEdited(function, recorded))
+        {
+            return new FunctionAgentFileOutcome(AgentFileStatus.EditedNotRemoved, recorded);
+        }
+
+        File.Delete(path);
+        return new FunctionAgentFileOutcome(AgentFileStatus.Removed, null);
     }
 
     public AgentFileOutcome Remove(InstalledAgentFile? recorded)
