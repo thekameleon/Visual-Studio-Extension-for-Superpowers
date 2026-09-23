@@ -22,7 +22,10 @@ public sealed class ModelCatalogCacheStore(ProfilePaths paths)
 
         try
         {
-            return JsonSerializer.Deserialize<CopilotModelCatalog>(File.ReadAllText(this.CacheFile), Options);
+            var catalog = JsonSerializer.Deserialize<CopilotModelCatalog>(File.ReadAllText(this.CacheFile), Options);
+            return catalog is null
+                ? null
+                : catalog with { Categories = catalog.Categories ?? Array.Empty<CopilotModelCategory>() };
         }
         catch (JsonException)
         {

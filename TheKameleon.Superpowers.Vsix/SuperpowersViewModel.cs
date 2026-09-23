@@ -26,12 +26,14 @@ namespace TheKameleon.Superpowers.Vsix
         private SuperpowersFunction function;
         private string family = string.Empty;
         private string model = string.Empty;
+        private string? lastSuggestion;
 
         public ModelPreferenceRow(SuperpowersFunction function, Func<SuperpowersFunction, string?>? suggestModel = null)
         {
             this.suggestModel = suggestModel;
             this.function = function;
             this.model = suggestModel?.Invoke(function) ?? string.Empty;
+            this.lastSuggestion = string.IsNullOrEmpty(this.model) ? null : this.model;
         }
 
         [DataMember]
@@ -43,9 +45,11 @@ namespace TheKameleon.Superpowers.Vsix
                 if (this.SetProperty(ref this.function, value))
                 {
                     this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
-                    if (string.IsNullOrWhiteSpace(this.model))
+                    if (string.IsNullOrWhiteSpace(this.model) || this.model == this.lastSuggestion)
                     {
-                        this.Model = this.suggestModel?.Invoke(value) ?? this.model;
+                        var suggestion = this.suggestModel?.Invoke(value);
+                        this.Model = suggestion ?? this.model;
+                        this.lastSuggestion = string.IsNullOrEmpty(suggestion) ? null : suggestion;
                     }
                 }
             }
@@ -464,10 +468,15 @@ namespace TheKameleon.Superpowers.Vsix
                 return;
             }
 
-            this.modelCatalog = result.Catalog;
-            this.modelCatalogCacheStore.Save(result.Catalog!);
+            var catalogToUse = result.Catalog!.Categories.Count == 0 && this.modelCatalog?.Categories.Count > 0
+                ? result.Catalog! with { Categories = this.modelCatalog.Categories }
+                : result.Catalog!;
+
+            this.modelCatalog = catalogToUse;
+            this.modelCatalogCacheStore.Save(catalogToUse);
             this.RefreshModelNameOptions();
-            this.ModelCatalogStatusText = $"Model list refreshed {result.Catalog!.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC ({result.Catalog.Models.Count} models).";
+            this.ModelCatalogStatusText = $"Model list refreshed {catalogToUse.FetchedAtUtc:yyyy-MM-dd HH:mm} UTC ({catalogToUse.Models.Count} models)."
+                + (result.Problems.Count > 0 ? " " + string.Join(" ", result.Problems) : string.Empty);
         }
 
         private void RefreshModelNameOptions()

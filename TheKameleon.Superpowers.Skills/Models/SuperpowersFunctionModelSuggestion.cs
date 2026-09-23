@@ -26,7 +26,7 @@ public static class SuperpowersFunctionModelSuggestion
     /// never as an error.</summary>
     public static string? Suggest(CopilotModelCatalog? catalog, SuperpowersFunction function, CopilotPlan plan)
     {
-        if (catalog is null || catalog.Categories.Count == 0)
+        if (catalog?.Categories is not { Count: > 0 })
         {
             return null;
         }

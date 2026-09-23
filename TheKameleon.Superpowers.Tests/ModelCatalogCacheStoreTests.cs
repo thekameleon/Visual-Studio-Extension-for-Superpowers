@@ -33,6 +33,23 @@ public sealed class ModelCatalogCacheStoreTests
     }
 
     [Fact]
+    public void LoadNormalizesOldFormatCacheWithNoCategoriesProperty()
+    {
+        using var profile = new TempProfile();
+        var store = new ModelCatalogCacheStore(profile.Paths);
+        Directory.CreateDirectory(profile.Paths.StateDirectory);
+        File.WriteAllText(
+            store.CacheFile,
+            "{\"models\":[{\"name\":\"GPT-5.4\",\"provider\":\"OpenAI\",\"releaseStatus\":\"GA\"}],\"planAvailability\":[],\"fetchedAtUtc\":\"2026-09-23T00:00:00Z\"}");
+
+        var loaded = store.Load();
+
+        Assert.NotNull(loaded);
+        Assert.NotNull(loaded!.Categories);
+        Assert.Empty(loaded.Categories);
+    }
+
+    [Fact]
     public void LoadReturnsNullOnCorruptFile()
     {
         using var profile = new TempProfile();
