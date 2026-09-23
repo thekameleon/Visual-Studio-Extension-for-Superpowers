@@ -1,0 +1,16 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "TDD",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v5.1.0",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/test-driven-development/SKILL.md",
+                            "purpose":  "Track observed red/green evidence for each authorized edit."
+                        }
+                    ],
+    "notes":  [
+                  "TDD requires observed red/green evidence rather than an assumed pass."
+              ]
+}

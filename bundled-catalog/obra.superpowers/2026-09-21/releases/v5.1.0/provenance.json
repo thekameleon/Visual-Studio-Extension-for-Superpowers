@@ -1,0 +1,63 @@
+﻿{
+    "schemaVersion":  1,
+    "repositoryUrl":  "https://github.com/obra/superpowers",
+    "releaseId":  317488345,
+    "releaseTag":  "v5.1.0",
+    "releaseName":  "v5.1.0",
+    "prerelease":  false,
+    "publishedAtUtc":  "2026-05-04T22:13:34Z",
+    "bundledAtUtc":  "2026-09-21T20:37:06.3340240Z",
+    "resolvedCommit":  "f2cbfbefebbfef77321e4c9abc9e949826bea9d7",
+    "sourceArchiveUrl":  "https://api.github.com/repos/obra/superpowers/zipball/v5.1.0",
+    "licenseSourceUrl":  "https://raw.githubusercontent.com/obra/superpowers/v5.1.0/LICENSE",
+    "files":  [
+                  {
+                      "path":  "source.zip",
+                      "sha256":  "f2cf464c143d0c8ef87d736f1deab029e518a7b5c95d78841f8840b9157fae28"
+                  },
+                  {
+                      "path":  "LICENSE.txt",
+                      "sha256":  "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+                  },
+                  {
+                      "path":  "adapter-manifest.json",
+                      "sha256":  "efcd113d1cddf192fa998e8efd9c61d85882da1e78464d2a770fd3e4f6dcf635"
+                  },
+                  {
+                      "path":  "plan-metadata.json",
+                      "sha256":  "5999baaf7af3c47fca64ebf75c608783eed92622274df3e15b5ea5c1b3cedbd2"
+                  },
+                  {
+                      "path":  "platform-metadata.json",
+                      "sha256":  "62a69e281217fcd6feac5eb313409025bac0b32ea8800757719b0881c3d459b3"
+                  },
+                  {
+                      "path":  "execute-metadata.json",
+                      "sha256":  "5a4b11099d241cef20b5078f28f1cdae031bd2e03bcc2c092e5ad822d02c22c3"
+                  },
+                  {
+                      "path":  "debug-metadata.json",
+                      "sha256":  "ed3ddcc2b072a29bab6285b9dd53550b1ef4df3e346f6290b22d9aa2f1d1b386"
+                  },
+                  {
+                      "path":  "tdd-metadata.json",
+                      "sha256":  "068a4259595dc8f82e4ec9797cae4285373bbe9036a1b565bbce5afeb3556ba7"
+                  },
+                  {
+                      "path":  "review-metadata.json",
+                      "sha256":  "885cce3d84e3abdfd79049c2e69fee90b143ebb12f2bef8c32db4d36e83120ab"
+                  },
+                  {
+                      "path":  "verify-metadata.json",
+                      "sha256":  "304588453802a98b3261e4dd3544041ecf0eb72fe6d81f6fadb3b530f817db3e"
+                  },
+                  {
+                      "path":  "refactor-metadata.json",
+                      "sha256":  "5cfd6e9c9276f0fff4da7ccc1aa4b8995a3bf51026ca1022142265c77441e6f1"
+                  },
+                  {
+                      "path":  "finish-metadata.json",
+                      "sha256":  "1d6ec177f8645282f01f2035be00c10cb95c6dac23cfda6682d0c5e9578c3915"
+                  }
+              ]
+}

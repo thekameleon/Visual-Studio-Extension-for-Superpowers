@@ -1,0 +1,32 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "Refactor",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v5.0.6",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/writing-plans/SKILL.md",
+                            "purpose":  "Plan the refactor scope and behavior baseline as needed."
+                        },
+                        {
+                            "order":  2,
+                            "skillPath":  "skills/test-driven-development/SKILL.md",
+                            "purpose":  "Preserve behavior using red/green evidence while refactoring."
+                        },
+                        {
+                            "order":  3,
+                            "skillPath":  "skills/requesting-code-review/SKILL.md",
+                            "purpose":  "Request review of the refactor."
+                        },
+                        {
+                            "order":  4,
+                            "skillPath":  "skills/verification-before-completion/SKILL.md",
+                            "purpose":  "Verify the behavior baseline still holds before completion."
+                        }
+                    ],
+    "notes":  [
+                  "Refactor is an approved product-specific composition of upstream planning/TDD/review/verification skills.",
+                  "There is no dedicated upstream Refactor skill in the reviewed tree; this composition is explicitly labeled as adapter-owned, not a claimed upstream skill."
+              ]
+}

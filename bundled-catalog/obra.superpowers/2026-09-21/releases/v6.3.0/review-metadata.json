@@ -1,0 +1,21 @@
+﻿{
+    "schemaVersion":  1,
+    "entryPoint":  "Review",
+    "sourceRepository":  "https://github.com/obra/superpowers",
+    "releaseTag":  "v6.3.0",
+    "composition":  [
+                        {
+                            "order":  1,
+                            "skillPath":  "skills/requesting-code-review/SKILL.md",
+                            "purpose":  "Request a review with findings and disposition tracking."
+                        },
+                        {
+                            "order":  2,
+                            "skillPath":  "skills/receiving-code-review/SKILL.md",
+                            "purpose":  "Process review findings and record disposition."
+                        }
+                    ],
+    "notes":  [
+                  "Review capability-gates fresh reviewer/subagent requirements and labels manual review honestly rather than claiming independent review."
+              ]
+}
