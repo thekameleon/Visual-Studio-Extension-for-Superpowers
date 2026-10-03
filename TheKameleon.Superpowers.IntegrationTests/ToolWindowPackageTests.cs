@@ -115,7 +115,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var view = LoadEmbeddedToolWindowXaml();
             XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand", "CheckForUpdatesCommand" })
+            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand", "CheckForUpdatesCommand", "InstallCopilotCliCommand", "SignInCopilotCliCommand", "VerifyCopilotCliCommand" })
             {
                 var button = Assert.Single(view.Descendants(presentation + "Button"), element =>
                     (string?)element.Attribute("Command") == $"{{Binding {command}}}");

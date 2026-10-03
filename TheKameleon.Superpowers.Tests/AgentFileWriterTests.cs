@@ -18,8 +18,16 @@ public sealed class AgentFileWriterTests : IDisposable
     [InlineData("`superpowers:<name>` means the skill named `<name>`")]
     [InlineData("Do not skip a step")]
     [InlineData("interactive Agent mode (Autopilot off)")]
-    [InlineData("Subagents and the Task tool are not available")]
+    [InlineData("say so and do the work sequentially yourself")]
+    [InlineData("copilot -p")]
+    [InlineData("--allow-all-tools")]
+    [InlineData("Verify the subagent's work yourself")]
     [InlineData("using-superpowers")]
+    [InlineData("confirm the file exists on disk")]
+    [InlineData("Keep each terminal command on one line")]
+    [InlineData("\"No test is available\" is not a failing test")]
+    [InlineData("No git repository")]
+    [InlineData("say the review was not independent")]
     public void BootstrapContainsEachTranslationRule(string fragment)
     {
         Assert.Contains(fragment, BootstrapText.Body, StringComparison.Ordinal);

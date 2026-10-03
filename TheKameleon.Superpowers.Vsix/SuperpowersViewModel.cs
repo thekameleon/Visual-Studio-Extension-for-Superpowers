@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.Extensibility.UI;
 using TheKameleon.Superpowers.Core.Contracts.Catalog;
 using TheKameleon.Superpowers.Core.Contracts.Settings;
 using TheKameleon.Superpowers.Skills.Catalog;
+using TheKameleon.Superpowers.Skills.Cli;
 using TheKameleon.Superpowers.Skills.Install;
 using TheKameleon.Superpowers.Skills.Models;
 using TheKameleon.Superpowers.Skills.Setup;
@@ -115,6 +116,8 @@ namespace TheKameleon.Superpowers.Vsix
         private readonly VisualStudioExtensibility extensibility;
         private readonly ProfilePaths paths = ProfilePaths.ForCurrentUser();
         private readonly SuperpowersSetup setup;
+        private readonly CopilotCliSetup copilotCli = new(new CmdProcessRunner());
+        private CopilotCliVerification? cliVerification;
         private readonly string catalogRoot;
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
         private IReadOnlyList<AvailableRelease> releases = Array.Empty<AvailableRelease>();
@@ -167,7 +170,19 @@ namespace TheKameleon.Superpowers.Vsix
             });
             this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
             this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
+            this.InstallCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.InstallCopilotCliAsync, cancellationToken));
+            this.SignInCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SignInCopilotCliAsync, cancellationToken));
+            this.VerifyCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.VerifyCopilotCliAsync, cancellationToken));
         }
+
+        [DataMember]
+        public IAsyncCommand InstallCopilotCliCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand SignInCopilotCliCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand VerifyCopilotCliCommand { get; }
 
         [DataMember]
         public string Explanation { get; } =
@@ -449,12 +464,87 @@ namespace TheKameleon.Superpowers.Vsix
         {
             var checks = await Task.Run(() => new StatusProbe(this.paths).Run(CopilotLogDiagnostic.DefaultLogDirectory), cancellationToken).ConfigureAwait(false);
             this.Checks.Clear();
-            this.Checks.AddRange(checks.Select(check => new StatusItem(LevelLabel(check.Level), check.Title, check.Message)));
+            this.Checks.AddRange(checks.Select(ToStatusItem));
+            var cliStatus = await Task.Run(this.copilotCli.Detect, cancellationToken).ConfigureAwait(false);
+            this.Checks.Add(ToStatusItem(CopilotCliSetup.ToInstalledCheck(cliStatus)));
+            this.Checks.Add(ToStatusItem(CopilotCliSetup.ToSignInCheck(cliStatus, this.cliVerification)));
 
             var state = this.setup.LoadState().State;
             this.InstalledText = state.Release is null ? "Not installed." : $"Installed: {state.Release.Tag} ({state.Release.Source}).";
             this.alwaysOn = state.AlwaysOn.Enabled;
             this.AlwaysOnButtonText = this.alwaysOn ? "Turn always-on off" : "Turn always-on on";
+        }
+
+        private async Task InstallCopilotCliAsync(CancellationToken cancellationToken)
+        {
+            var status = await Task.Run(this.copilotCli.Detect, cancellationToken).ConfigureAwait(false);
+            if (status.IsInstalled)
+            {
+                this.StatusText = $"GitHub Copilot CLI {status.Version} is already installed.";
+                return;
+            }
+
+            var command = await Task.Run(this.copilotCli.ChooseInstallCommand, cancellationToken).ConfigureAwait(false);
+            if (command is null)
+            {
+                this.StatusText = "Neither winget nor npm was found, so the GitHub Copilot CLI cannot be installed from here. Install winget (App Installer) or Node.js 22+, then try again.";
+                return;
+            }
+
+            var confirmed = await this.extensibility.Shell().ShowPromptAsync(
+                $"Install the GitHub Copilot CLI by running:\n\n{command}\n\nThis installs software outside your Superpowers files. Remove will not uninstall it.",
+                PromptOptions.OKCancel,
+                cancellationToken).ConfigureAwait(false);
+            if (!confirmed)
+            {
+                this.StatusText = "Copilot CLI installation was not started.";
+                return;
+            }
+
+            this.StatusText = $"Installing the GitHub Copilot CLI ({command})…";
+            var result = await Task.Run(() => this.copilotCli.Install(command), cancellationToken).ConfigureAwait(false);
+            this.StatusText = result.Message;
+            await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task VerifyCopilotCliAsync(CancellationToken cancellationToken)
+        {
+            var status = await Task.Run(this.copilotCli.Detect, cancellationToken).ConfigureAwait(false);
+            if (!status.IsInstalled)
+            {
+                this.StatusText = "Install the GitHub Copilot CLI first.";
+                return;
+            }
+
+            this.StatusText = "Verifying the Copilot CLI sign-in with a test prompt (uses one Copilot request)...";
+            this.cliVerification = await Task.Run(this.copilotCli.Verify, cancellationToken).ConfigureAwait(false);
+            this.StatusText = this.cliVerification.Message;
+            await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task SignInCopilotCliAsync(CancellationToken cancellationToken)
+        {
+            var status = await Task.Run(this.copilotCli.Detect, cancellationToken).ConfigureAwait(false);
+            if (!status.IsInstalled)
+            {
+                this.StatusText = "Install the GitHub Copilot CLI first.";
+                return;
+            }
+
+            using var login = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/d /c copilot login") { UseShellExecute = true });
+            if (login is null)
+            {
+                this.StatusText = "Could not start the Copilot CLI sign-in.";
+                return;
+            }
+
+            this.StatusText = "Signing in to the Copilot CLI. Approve the request in your browser; the sign-in window closes when it finishes.";
+            await login.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            this.cliVerification = null;
+            this.StatusText = login.ExitCode == 0
+                ? "Signed in to the GitHub Copilot CLI."
+                : $"Copilot CLI sign-in did not complete (exit code {login.ExitCode}).";
+            await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
         }
 
         private void Report(SetupResult result, string successMessage)
@@ -595,6 +685,14 @@ namespace TheKameleon.Superpowers.Vsix
 
             return candidate.Source == "download" ? label + " (downloaded)" : label;
         }
+
+        private static StatusItem ToStatusItem(StatusCheck check) => check.Level switch
+        {
+            StatusLevel.Pass => new StatusItem(LevelLabel(check.Level), check.Title, check.Message, "\u2713", "#FF2E9E44"),
+            StatusLevel.Warning => new StatusItem(LevelLabel(check.Level), check.Title, check.Message, "!", "#FFD69E00"),
+            StatusLevel.Fail => new StatusItem(LevelLabel(check.Level), check.Title, check.Message, "\u2715", "#FFD13438"),
+            _ => new StatusItem(LevelLabel(check.Level), check.Title, check.Message, "!", "#FFD69E00"),
+        };
 
         private static string LevelLabel(StatusLevel level) => level switch
         {

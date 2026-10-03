@@ -18,7 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="SuperpowersToolWindowControl.xaml" />
+    <EmbeddedResource Include="SuperpowersToolWindowControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </EmbeddedResource>
     <Page Remove="SuperpowersToolWindowControl.xaml" />
     <Content Include="..\bundled-catalog\obra.superpowers\2026-09-21\**\*" Link="bundled-catalog\obra.superpowers\2026-09-21\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" IncludeInVSIX="true" />
     <Content Include="Resources\icon.png" IncludeInVSIX="true" />

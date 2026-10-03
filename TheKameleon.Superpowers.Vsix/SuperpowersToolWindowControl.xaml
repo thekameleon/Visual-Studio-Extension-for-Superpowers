@@ -2,43 +2,88 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:colors="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
               xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml">
-    <Border Padding="12"
-            Background="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+    <Border Background="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
             TextElement.Foreground="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowTextBrushKey}}">
+        <Border.Resources>
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="14,12" />
+                <Setter Property="Margin" Value="0,0,0,12" />
+            </Style>
+            <Style x:Key="SectionTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="Hint" TargetType="TextBlock">
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Opacity" Value="0.75" />
+            </Style>
+            <Style x:Key="FieldLabel" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Margin" Value="0,0,12,0" />
+            </Style>
+            <Style TargetType="Button">
+                <Setter Property="MinWidth" Value="80" />
+                <Setter Property="MinHeight" Value="24" />
+                <Setter Property="Padding" Value="10,2" />
+                <Setter Property="Margin" Value="0,0,6,6" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+            </Style>
+            <Style TargetType="ComboBox">
+                <Setter Property="MinHeight" Value="24" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
+        </Border.Resources>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel IsEnabled="{Binding IsIdle}">
-                <StackPanel Orientation="Horizontal">
-                    <vs:Image Source="Superpowers" Width="32" Height="32" Margin="0,0,8,0" AutomationProperties.Name="Superpowers" />
-                    <TextBlock Text="Superpowers for GitHub Copilot" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
-                </StackPanel>
-                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Margin="0,6,0,0" />
-
-                <Grid Margin="0,12,0,0">
+            <StackPanel IsEnabled="{Binding IsIdle}" MaxWidth="620" HorizontalAlignment="Left" Margin="16,14,16,16">
+                <Grid Margin="0,0,0,14">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Release:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox Grid.Column="1"
-                              ItemsSource="{Binding ReleaseVersions}"
-                              SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}"
-                              AutomationProperties.Name="Superpowers release" />
+                    <vs:Image Grid.Column="0" Source="Superpowers" Width="32" Height="32" Margin="0,0,10,0" VerticalAlignment="Top" AutomationProperties.Name="Superpowers" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Superpowers for GitHub Copilot" FontWeight="SemiBold" FontSize="16" />
+                        <TextBlock Text="{Binding Explanation}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
+                    </StackPanel>
                 </Grid>
 
-                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <Button Command="{Binding CheckForUpdatesCommand}" Content="Check for newer releases" Padding="12,2" Margin="0,0,8,0" AutomationProperties.Name="Check GitHub for newer Superpowers releases" />
-                    <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" Content="Include prereleases" VerticalAlignment="Center" AutomationProperties.Name="Include prerelease versions" />
-                </StackPanel>
-
-                <WrapPanel Margin="0,8,0,0">
-                    <Button Command="{Binding InstallCommand}" Content="Install" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Install the selected Superpowers release" />
-                    <Button Command="{Binding RepairCommand}" Content="Repair" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Repair the Superpowers installation" />
-                    <Button Command="{Binding RemoveCommand}" Content="Remove from my profile" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Remove Superpowers from your profile" />
-                    <Button Command="{Binding ToggleAlwaysOnCommand}" Content="{Binding AlwaysOnButtonText}" Margin="0,0,8,4" Padding="12,2" AutomationProperties.Name="Toggle always-on Superpowers" />
-                </WrapPanel>
-
-                <TextBlock Text="{Binding InstalledText}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding StatusText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Installation" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="{Binding InstalledText}" Style="{StaticResource Hint}" Margin="0,2,0,10" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="260" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Release" Style="{StaticResource FieldLabel}" />
+                            <ComboBox Grid.Row="0" Grid.Column="1"
+                                      ItemsSource="{Binding ReleaseVersions}"
+                                      SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}"
+                                      AutomationProperties.Name="Superpowers release" />
+                            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button Command="{Binding CheckForUpdatesCommand}" Content="Check for newer releases" AutomationProperties.Name="Check GitHub for newer Superpowers releases" />
+                                <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" Content="Include prereleases" VerticalAlignment="Center" Margin="6,0,0,6" AutomationProperties.Name="Include prerelease versions" />
+                            </StackPanel>
+                        </Grid>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Command="{Binding InstallCommand}" Content="Install" FontWeight="SemiBold" AutomationProperties.Name="Install the selected Superpowers release" />
+                            <Button Command="{Binding RepairCommand}" Content="Repair" AutomationProperties.Name="Repair the Superpowers installation" />
+                            <Button Command="{Binding ToggleAlwaysOnCommand}" Content="{Binding AlwaysOnButtonText}" AutomationProperties.Name="Toggle always-on Superpowers" />
+                            <Button Command="{Binding RemoveCommand}" Content="Remove from my profile" AutomationProperties.Name="Remove Superpowers from your profile" />
+                        </WrapPanel>
+                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Border>
 
                 <Grid Margin="0,16,0,4">
                     <Grid.ColumnDefinitions>
