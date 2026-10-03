@@ -121,6 +121,7 @@ namespace TheKameleon.Superpowers.Vsix
         private readonly string catalogRoot;
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
         private IReadOnlyList<AvailableRelease> releases = Array.Empty<AvailableRelease>();
+        private IReadOnlyList<DiscoveredRemoteRelease> remoteReleases = Array.Empty<DiscoveredRemoteRelease>();
         private readonly CopilotModelCatalogFetcher modelCatalogFetcher = new(Http);
         private readonly ModelCatalogCacheStore modelCatalogCacheStore;
         private readonly ModelPreferencesStore modelPreferencesStore;
@@ -134,13 +135,15 @@ namespace TheKameleon.Superpowers.Vsix
         private string alwaysOnButtonText = "Turn always-on on";
         private bool alwaysOn;
         private bool isIdle = true;
-        private bool includePrereleases;
+        private bool includePrereleases = true;
 
         public SuperpowersViewModel(VisualStudioExtensibility extensibility)
         {
             this.extensibility = extensibility ?? throw new ArgumentNullException(nameof(extensibility));
             this.setup = new SuperpowersSetup(this.paths);
-            this.catalogRoot = Path.Combine(AppContext.BaseDirectory, CatalogRelativeRoot.Replace('/', Path.DirectorySeparatorChar));
+            this.catalogRoot = Path.Combine(
+                Path.GetDirectoryName(typeof(SuperpowersViewModel).Assembly.Location) ?? AppContext.BaseDirectory,
+                CatalogRelativeRoot.Replace('/', Path.DirectorySeparatorChar));
             this.modelCatalogCacheStore = new ModelCatalogCacheStore(this.paths);
             this.modelPreferencesStore = new ModelPreferencesStore(this.paths);
             this.modelCatalog = this.modelCatalogCacheStore.Load();
@@ -155,6 +158,7 @@ namespace TheKameleon.Superpowers.Vsix
             this.RefreshCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshStatusAsync, cancellationToken));
             this.ToggleAlwaysOnCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.ToggleAlwaysOnAsync, cancellationToken));
             this.CheckForUpdatesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.CheckForUpdatesAsync, cancellationToken));
+            this.RemoveDownloadCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RemoveDownloadAsync, cancellationToken));
             this.RefreshModelCatalogCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.RefreshModelCatalogAsync, cancellationToken));
             this.AddPreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) =>
             {
@@ -228,6 +232,13 @@ namespace TheKameleon.Superpowers.Vsix
         }
 
         [DataMember]
+        public bool AlwaysOn
+        {
+            get => this.alwaysOn;
+            set => this.SetProperty(ref this.alwaysOn, value);
+        }
+
+        [DataMember]
         public string AlwaysOnButtonText
         {
             get => this.alwaysOnButtonText;
@@ -260,11 +271,22 @@ namespace TheKameleon.Superpowers.Vsix
         public bool IncludePrereleases
         {
             get => this.includePrereleases;
-            set => this.SetProperty(ref this.includePrereleases, value);
+            set
+            {
+                if (this.SetProperty(ref this.includePrereleases, value))
+                {
+                    var previous = this.SelectedReleaseVersion;
+                    this.RebuildReleaseVersions();
+                    this.SelectedReleaseVersion = this.ReleaseVersions.Contains(previous!) ? previous : this.ReleaseVersions.FirstOrDefault();
+                }
+            }
         }
 
         [DataMember]
         public IAsyncCommand CheckForUpdatesCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand RemoveDownloadCommand { get; }
 
         [DataMember]
         public string ModelCatalogStatusText
@@ -304,7 +326,38 @@ namespace TheKameleon.Superpowers.Vsix
         [DataMember]
         public IAsyncCommand SaveModelPreferencesCommand { get; }
 
-        public Task InitializeAsync(CancellationToken cancellationToken) => this.RunAsync(this.LoadAsync, cancellationToken);
+        public Task InitializeAsync(CancellationToken cancellationToken) => this.RunAsync(this.StartupAsync, cancellationToken);
+
+        private async Task StartupAsync(CancellationToken cancellationToken)
+        {
+            await this.LoadAsync(cancellationToken).ConfigureAwait(false);
+            var status = this.StatusText;
+            try
+            {
+                await this.RefreshModelCatalogAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                this.ModelCatalogStatusText = "Couldn't refresh the model list: " + exception.Message;
+            }
+
+            try
+            {
+                var discovery = await new ApprovedReleaseDiscoveryService(Http).DiscoverAsync(ReleaseChannelFilter.IncludePrerelease, cancellationToken).ConfigureAwait(false);
+                if (!discovery.HasErrors)
+                {
+                    var previous = this.SelectedReleaseVersion;
+                    this.remoteReleases = discovery.Releases;
+                    this.RebuildReleaseVersions();
+                    this.SelectedReleaseVersion = previous;
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+            }
+
+            this.StatusText = status;
+        }
 
         private async Task RunAsync(Func<CancellationToken, Task> operation, CancellationToken cancellationToken)
         {
@@ -341,8 +394,7 @@ namespace TheKameleon.Superpowers.Vsix
                 .Concat(bundled.Where(candidate => downloaded.All(download => download.Release.ReleaseTag != candidate.Release.ReleaseTag)))
                 .OrderByDescending(candidate => candidate.Release.PublishedAtUtc ?? DateTimeOffset.MinValue)
                 .ToArray();
-            this.ReleaseVersions.Clear();
-            this.ReleaseVersions.AddRange(this.releases.Select(this.Label));
+            this.RebuildReleaseVersions();
 
             var state = this.setup.LoadState().State;
             var installedTag = state.Release?.Tag;
@@ -378,6 +430,15 @@ namespace TheKameleon.Superpowers.Vsix
 
         private async Task InstallAsync(CancellationToken cancellationToken)
         {
+            var remote = this.SelectedRemoteRelease();
+            if (remote is not null)
+            {
+                if (!await this.DownloadAsync(remote, cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
+            }
+
             var selected = this.SelectedRelease();
             if (selected is null)
             {
@@ -451,6 +512,7 @@ namespace TheKameleon.Superpowers.Vsix
                     cancellationToken).ConfigureAwait(false);
                 if (!confirmed)
                 {
+                    this.RaiseNotifyPropertyChangedEvent(nameof(this.AlwaysOn));
                     return;
                 }
             }
@@ -471,7 +533,8 @@ namespace TheKameleon.Superpowers.Vsix
 
             var state = this.setup.LoadState().State;
             this.InstalledText = state.Release is null ? "Not installed." : $"Installed: {state.Release.Tag} ({state.Release.Source}).";
-            this.alwaysOn = state.AlwaysOn.Enabled;
+            this.AlwaysOn = state.AlwaysOn.Enabled;
+            this.RaiseNotifyPropertyChangedEvent(nameof(this.AlwaysOn));
             this.AlwaysOnButtonText = this.alwaysOn ? "Turn always-on off" : "Turn always-on on";
         }
 
@@ -567,17 +630,58 @@ namespace TheKameleon.Superpowers.Vsix
                 return;
             }
 
-            var known = this.releases.Select(candidate => candidate.Release.ReleaseTag).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var newer = discovery.Releases.Where(release => !known.Contains(release.ReleaseTag)).ToArray();
-            if (newer.Length == 0)
+            var previous = this.SelectedReleaseVersion;
+            this.remoteReleases = discovery.Releases;
+            this.RebuildReleaseVersions();
+            this.SelectedReleaseVersion = this.ReleaseVersions.Contains(previous!) ? previous : this.ReleaseVersions.FirstOrDefault();
+            var notLocal = this.RemoteOnly().Count();
+            this.StatusText = notLocal == 0
+                ? "You already have every published release."
+                : $"Found {notLocal} release(s) on GitHub that are not downloaded yet, marked (GitHub). Selecting one and choosing Install downloads it first.";
+        }
+
+        private async Task<bool> DownloadAsync(DiscoveredRemoteRelease remote, CancellationToken cancellationToken)
+        {
+            var confirmed = await this.extensibility.Shell().ShowPromptAsync(
+                $"Download Superpowers {remote.ReleaseTag}{(remote.IsPrerelease ? " (prerelease)" : string.Empty)} from github.com/obra/superpowers? It is checked and stored in %LOCALAPPDATA%\\TheKameleon.Superpowers\\downloads.",
+                PromptOptions.OKCancel,
+                cancellationToken).ConfigureAwait(false);
+            if (!confirmed)
             {
-                this.StatusText = "You already have every published release.";
+                return false;
+            }
+
+            var target = DownloadedReleases.TargetDirectory(this.paths, remote.ReleaseTag);
+            var result = await new ApprovedReleaseDownloadService(Http).DownloadAndActivateAsync(remote, target, approvalGranted: true, cancellationToken).ConfigureAwait(false);
+            if (result.HasErrors)
+            {
+                this.StatusText = $"Download of {remote.ReleaseTag} failed; nothing was changed. " + string.Join(" ", result.Diagnostics.Select(diagnostic => diagnostic.Message));
+                return false;
+            }
+
+            await this.LoadAsync(cancellationToken).ConfigureAwait(false);
+            this.SelectedReleaseVersion = this.releases.Where(candidate => candidate.Release.ReleaseTag == remote.ReleaseTag).Select(this.Label).FirstOrDefault();
+            return true;
+        }
+
+        private async Task RemoveDownloadAsync(CancellationToken cancellationToken)
+        {
+            var selected = this.SelectedRelease();
+            if (selected is null || selected.Source != "download")
+            {
+                this.StatusText = "Select a release marked (downloaded) to remove it.";
                 return;
             }
 
-            var newest = newer.OrderByDescending(release => release.PublishedAtUtc).First();
+            var tag = selected.Release.ReleaseTag;
+            if (string.Equals(this.setup.LoadState().State.Release?.Tag, tag, StringComparison.OrdinalIgnoreCase))
+            {
+                this.StatusText = $"{tag} is currently installed. Install a different release before removing its download.";
+                return;
+            }
+
             var confirmed = await this.extensibility.Shell().ShowPromptAsync(
-                $"Download Superpowers {newest.ReleaseTag}{(newest.IsPrerelease ? " (prerelease)" : string.Empty)} from github.com/obra/superpowers? It is checked and stored in %LOCALAPPDATA%\\TheKameleon.Superpowers\\downloads; nothing is installed until you select Install.",
+                $"Delete the downloaded copy of Superpowers {tag}? You can download it again later.",
                 PromptOptions.OKCancel,
                 cancellationToken).ConfigureAwait(false);
             if (!confirmed)
@@ -585,18 +689,34 @@ namespace TheKameleon.Superpowers.Vsix
                 return;
             }
 
-            var target = DownloadedReleases.TargetDirectory(this.paths, newest.ReleaseTag);
-            var result = await new ApprovedReleaseDownloadService(Http).DownloadAndActivateAsync(newest, target, approvalGranted: true, cancellationToken).ConfigureAwait(false);
-            if (result.HasErrors)
-            {
-                this.StatusText = $"Download of {newest.ReleaseTag} failed; nothing was changed. " + string.Join(" ", result.Diagnostics.Select(diagnostic => diagnostic.Message));
-                return;
-            }
-
+            var target = DownloadedReleases.TargetDirectory(this.paths, tag);
+            await Task.Run(() => { if (Directory.Exists(target)) { Directory.Delete(target, recursive: true); } }, cancellationToken).ConfigureAwait(false);
             await this.LoadAsync(cancellationToken).ConfigureAwait(false);
-            this.SelectedReleaseVersion = this.releases.Where(candidate => candidate.Release.ReleaseTag == newest.ReleaseTag).Select(this.Label).FirstOrDefault();
-            this.StatusText = $"Downloaded {newest.ReleaseTag}. Select Install to use it.";
+            this.StatusText = $"Removed the downloaded copy of {tag}.";
         }
+
+        private IEnumerable<DiscoveredRemoteRelease> RemoteOnly()
+        {
+            var known = this.releases.Select(candidate => candidate.Release.ReleaseTag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return this.remoteReleases.Where(remote => !known.Contains(remote.ReleaseTag) && (this.IncludePrereleases || !remote.IsPrerelease));
+        }
+
+        private void RebuildReleaseVersions()
+        {
+            var entries = this.releases.Select(candidate => (Date: candidate.Release.PublishedAtUtc ?? DateTimeOffset.MinValue, Label: this.Label(candidate)))
+                .Concat(this.RemoteOnly().Select(remote => ((DateTimeOffset)remote.PublishedAtUtc, RemoteLabel(remote))))
+                .OrderByDescending(entry => entry.Item1)
+                .Select(entry => entry.Item2)
+                .ToArray();
+            this.ReleaseVersions.Clear();
+            this.ReleaseVersions.AddRange(entries);
+        }
+
+        private DiscoveredRemoteRelease? SelectedRemoteRelease() =>
+            this.RemoteOnly().FirstOrDefault(remote => RemoteLabel(remote) == this.SelectedReleaseVersion);
+
+        private static string RemoteLabel(DiscoveredRemoteRelease remote) =>
+            remote.ReleaseTag + (remote.IsPrerelease ? " (prerelease)" : string.Empty) + " (GitHub)";
 
         private async Task RefreshModelCatalogAsync(CancellationToken cancellationToken)
         {

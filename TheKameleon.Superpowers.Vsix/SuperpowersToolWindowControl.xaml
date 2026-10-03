@@ -1,4 +1,4 @@
-<DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               xmlns:colors="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
               xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml">
@@ -71,103 +71,140 @@
                                       SelectedItem="{Binding SelectedReleaseVersion, Mode=TwoWay}"
                                       AutomationProperties.Name="Superpowers release" />
                             <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,6,0,0">
-                                <Button Command="{Binding CheckForUpdatesCommand}" Content="Check for newer releases" AutomationProperties.Name="Check GitHub for newer Superpowers releases" />
-                                <CheckBox IsChecked="{Binding IncludePrereleases, Mode=TwoWay}" Content="Include prereleases" VerticalAlignment="Center" Margin="6,0,0,6" AutomationProperties.Name="Include prerelease versions" />
+                                <Button Command="{Binding CheckForUpdatesCommand}" Content="List all GitHub releases" AutomationProperties.Name="List all Superpowers releases published on GitHub" />
+
                             </StackPanel>
                         </Grid>
                         <WrapPanel Margin="0,10,0,0">
                             <Button Command="{Binding InstallCommand}" Content="Install" FontWeight="SemiBold" AutomationProperties.Name="Install the selected Superpowers release" />
                             <Button Command="{Binding RepairCommand}" Content="Repair" AutomationProperties.Name="Repair the Superpowers installation" />
-                            <Button Command="{Binding ToggleAlwaysOnCommand}" Content="{Binding AlwaysOnButtonText}" AutomationProperties.Name="Toggle always-on Superpowers" />
                             <Button Command="{Binding RemoveCommand}" Content="Remove from my profile" AutomationProperties.Name="Remove Superpowers from your profile" />
                         </WrapPanel>
+                        <CheckBox IsChecked="{Binding AlwaysOn, Mode=OneWay}" Command="{Binding ToggleAlwaysOnCommand}" Margin="0,6,0,4" AutomationProperties.Name="Always-on Superpowers" ToolTip="Use Superpowers in every Agent-mode chat">
+                            <TextBlock Text="Always on (use Superpowers in every Agent-mode chat)" Foreground="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowTextBrushKey}}" />
+                        </CheckBox>
                         <TextBlock Text="{Binding StatusText}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Border>
 
-                <Grid Margin="0,16,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="Refresh" Padding="12,2" AutomationProperties.Name="Refresh Superpowers status" />
-                </Grid>
-                <ItemsControl ItemsSource="{Binding Checks}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,4,0,0">
-                                <TextBlock TextWrapping="Wrap">
-                                    <Run Text="{Binding Level, Mode=OneWay}" FontWeight="SemiBold" />
-                                    <Run Text=" · " />
-                                    <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" />
-                                </TextBlock>
-                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="12,0,0,0" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                            <TextBlock Text="Status" Style="{StaticResource SectionTitle}" Margin="0,0,12,0" />
+                            <Button Command="{Binding RefreshCommand}" Content="Refresh" Margin="0" AutomationProperties.Name="Refresh Superpowers status" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Checks}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="28" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="18" Height="18" CornerRadius="9" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,1,0,0" AutomationProperties.Name="{Binding Level}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#FFD69E00" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Level}" Value="OK">
+                                                            <Setter Property="Background" Value="#FF2E9E44" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Level}" Value="Problem">
+                                                            <Setter Property="Background" Value="#FFD13438" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Symbol}" Foreground="White" FontFamily="Segoe UI Symbol" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Message}" Style="{StaticResource Hint}" Margin="0,1,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
-                <TextBlock Text="Using Superpowers" FontWeight="SemiBold" Margin="0,16,0,4" />
-                <ItemsControl ItemsSource="{Binding Tips}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Copilot CLI" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Skills that dispatch subagents hand the work to the GitHub Copilot CLI. Install it and sign in once." Style="{StaticResource Hint}" Margin="0,2,0,10" />
+                        <WrapPanel>
+                            <Button Command="{Binding InstallCopilotCliCommand}" Content="Install Copilot CLI" AutomationProperties.Name="Install the GitHub Copilot CLI" />
+                            <Button Command="{Binding SignInCopilotCliCommand}" Content="Sign in" AutomationProperties.Name="Sign in to the GitHub Copilot CLI" />
+                            <Button Command="{Binding VerifyCopilotCliCommand}" Content="Verify sign-in" ToolTip="Sends one small test prompt to the Copilot CLI (uses one Copilot request)" AutomationProperties.Name="Verify the Copilot CLI sign-in with a test prompt" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
 
-                <TextBlock Text="Model preferences" FontWeight="SemiBold" Margin="0,16,0,4" />
-                <TextBlock TextWrapping="Wrap" Margin="0,0,0,4">
-                    <Run Text="Optional. Sets which Copilot model each Superpowers function's agent should use. This is advisory only — the extension cannot verify which models are actually enabled on your plan." />
-                </TextBlock>
-                <TextBlock Text="{Binding ModelCatalogStatusText}" TextWrapping="Wrap" FontStyle="Italic" Margin="0,0,0,4" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Using Superpowers" Style="{StaticResource SectionTitle}" />
+                        <ItemsControl ItemsSource="{Binding Tips}" Margin="0,4,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="16" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="&#x2022;" Opacity="0.75" />
+                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
-                <Grid Margin="0,4,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Your Copilot plan:" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <ComboBox Grid.Column="1"
-                              ItemsSource="{Binding PlanOptions}"
-                              SelectedItem="{Binding SelectedPlan, Mode=TwoWay}"
-                              AutomationProperties.Name="Your Copilot plan" />
-                </Grid>
-
-                <Button Command="{Binding RefreshModelCatalogCommand}" Content="Refresh model list" HorizontalAlignment="Left" Padding="12,2" Margin="0,0,0,8" AutomationProperties.Name="Refresh the Copilot model list from GitHub" />
-
-                <ItemsControl ItemsSource="{Binding FunctionRows}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,2,0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110" />
-                                    <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox Grid.Column="0"
-                                          ItemsSource="{Binding DataContext.FunctionOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                          SelectedItem="{Binding Function, Mode=TwoWay}"
-                                          Margin="0,0,4,0"
-                                          AutomationProperties.Name="Superpowers function" />
-                                <TextBlock Grid.Column="1" Text="{Binding Provider}" Margin="4,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Model provider" />
-                                <ComboBox Grid.Column="2" IsEditable="True"
-                                          Text="{Binding Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          ItemsSource="{Binding DataContext.ModelNameOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                          Margin="4,0" AutomationProperties.Name="Model name" />
-                                <Button Grid.Column="3" Command="{Binding DataContext.RemovePreferenceRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                        CommandParameter="{Binding}" Content="Remove" Padding="8,1" AutomationProperties.Name="Remove this model preference row" />
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <Button Command="{Binding AddPreferenceRowCommand}" Content="Add row" Padding="12,2" Margin="0,0,8,0" AutomationProperties.Name="Add a model preference row" />
-                    <Button Command="{Binding SaveModelPreferencesCommand}" Content="Save model preferences" Padding="12,2" AutomationProperties.Name="Save model preferences" />
-                </StackPanel>
+                <Border Style="{StaticResource Card}" Margin="0">
+                    <StackPanel>
+                        <TextBlock Text="Model preferences" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Optional. Sets which Copilot model each Superpowers function's agent should use. This is advisory only &#x2014; the extension cannot verify which models are actually enabled on your plan." Style="{StaticResource Hint}" Margin="0,2,0,4" />
+                        <TextBlock Text="{Binding ModelCatalogStatusText}" Style="{StaticResource Hint}" FontStyle="Italic" Margin="0,0,0,10" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <TextBlock Text="Your Copilot plan" Style="{StaticResource FieldLabel}" />
+                            <ComboBox Width="180" Margin="0,0,6,0" ItemsSource="{Binding PlanOptions}" SelectedItem="{Binding SelectedPlan, Mode=TwoWay}" AutomationProperties.Name="Your Copilot plan" />
+                            <Button Command="{Binding RefreshModelCatalogCommand}" Content="Refresh model list" Margin="0" AutomationProperties.Name="Refresh the Copilot model list from GitHub" />
+                        </StackPanel>
+                        <Grid Margin="0,0,0,4" Opacity="0.75">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Function" />
+                            <TextBlock Grid.Column="1" Text="Provider" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="2" Text="Model" Margin="8,0,0,0" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding FunctionRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="220" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" ItemsSource="{Binding DataContext.FunctionOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}" SelectedItem="{Binding Function, Mode=TwoWay}" AutomationProperties.Name="Superpowers function" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Provider}" Margin="8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Model provider" />
+                                        <ComboBox Grid.Column="2" IsEditable="True" Text="{Binding Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.ModelNameOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Margin="8,0,6,0" AutomationProperties.Name="Model name" />
+                                        <Button Grid.Column="3" Command="{Binding DataContext.RemovePreferenceRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Content="Remove" MinWidth="0" Margin="0" AutomationProperties.Name="Remove this model preference row" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Command="{Binding AddPreferenceRowCommand}" Content="Add row" AutomationProperties.Name="Add a model preference row" />
+                            <Button Command="{Binding SaveModelPreferencesCommand}" Content="Save model preferences" FontWeight="SemiBold" AutomationProperties.Name="Save model preferences" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
     </Border>

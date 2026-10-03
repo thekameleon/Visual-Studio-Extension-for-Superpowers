@@ -115,13 +115,17 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var view = LoadEmbeddedToolWindowXaml();
             XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "ToggleAlwaysOnCommand", "CheckForUpdatesCommand", "InstallCopilotCliCommand", "SignInCopilotCliCommand", "VerifyCopilotCliCommand" })
+            foreach (var command in new[] { "InstallCommand", "RepairCommand", "RemoveCommand", "RefreshCommand", "CheckForUpdatesCommand", "InstallCopilotCliCommand", "SignInCopilotCliCommand", "VerifyCopilotCliCommand" })
             {
                 var button = Assert.Single(view.Descendants(presentation + "Button"), element =>
                     (string?)element.Attribute("Command") == $"{{Binding {command}}}");
                 Assert.False(string.IsNullOrWhiteSpace((string?)button.Attribute("AutomationProperties.Name")),
                     $"Button bound to {command} must expose an accessible name.");
             }
+
+            var alwaysOn = Assert.Single(view.Descendants(presentation + "CheckBox"), element =>
+                (string?)element.Attribute("Command") == "{Binding ToggleAlwaysOnCommand}");
+            Assert.False(string.IsNullOrWhiteSpace((string?)alwaysOn.Attribute("AutomationProperties.Name")));
 
             var releasePicker = Assert.Single(view.Descendants(presentation + "ComboBox"), element => (string?)element.Attribute("ItemsSource") == "{Binding ReleaseVersions}");
             Assert.Equal("{Binding ReleaseVersions}", (string?)releasePicker.Attribute("ItemsSource"));
