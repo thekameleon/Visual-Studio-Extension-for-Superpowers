@@ -1,6 +1,6 @@
 # Prevent Duplicate Function Selection Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Stop a user from ending up with two model-preference rows for the same Superpowers function. Today nothing prevents it while editing, and `SaveModelPreferencesAsync`'s dedup logic silently keeps the last row and discards the rest with no warning — a real data-loss surprise. This plan makes the conflict impossible to create in the first place, rather than silently resolving it after the fact.
 
@@ -31,7 +31,7 @@ This task has no dedicated xUnit test — `ModelPreferenceRow` and `SuperpowersV
 
 Read `TheKameleon.Superpowers.Vsix/SuperpowersViewModel.cs` in full as it currently exists before editing — the diff below was written against the live post-merge content read this same session, but confirm before applying.
 
-- [ ] **Step 1: Extend `ModelPreferenceRow`'s constructor and `Function` setter**
+- [x] **Step 1: Extend `ModelPreferenceRow`'s constructor and `Function` setter**
 
 Replace the class's field declarations, constructor, and `Function` property with:
 
@@ -103,7 +103,7 @@ Note this deliberately does NOT use the file's usual `this.SetProperty(ref this.
 
 Everything else in `ModelPreferenceRow` (`FunctionLabel`, `Model`, `Provider`) stays exactly as it is today — this step only touches the fields, constructor, and `Function` property.
 
-- [ ] **Step 2: Add the availability/conflict/next-function helpers to `SuperpowersViewModel`**
+- [x] **Step 2: Add the availability/conflict/next-function helpers to `SuperpowersViewModel`**
 
 Add these three private methods near the existing `SuggestModel`/`LookupProvider` helpers:
 
@@ -129,7 +129,7 @@ Add these three private methods near the existing `SuggestModel`/`LookupProvider
         }
 ```
 
-- [ ] **Step 3: Wire the new callbacks into `AddPreferenceRowCommand`**
+- [x] **Step 3: Wire the new callbacks into `AddPreferenceRowCommand`**
 
 Replace the constructor's `AddPreferenceRowCommand` registration:
 
@@ -154,7 +154,7 @@ with:
             });
 ```
 
-- [ ] **Step 4: Wire the availability/conflict callbacks into `LoadAsync`'s row reconstruction**
+- [x] **Step 4: Wire the availability/conflict callbacks into `LoadAsync`'s row reconstruction**
 
 Existing rows loaded from saved preferences are already guaranteed unique (see Global Constraints), so this step does NOT add validation at construction time — it wires the callbacks so that once a loaded row exists, the user can still hit a conflict if they try to CHANGE that row's function to one another loaded row already has. In `LoadAsync`, change:
 
@@ -175,7 +175,7 @@ to:
 
 Note `suggestModel` is still deliberately omitted here (named-argument style, skipping straight to `lookupProvider`) — that constraint is unchanged from the earlier, already-merged plan and this step must not disturb it.
 
-- [ ] **Step 5: Build and run the full unit and integration suites**
+- [x] **Step 5: Build and run the full unit and integration suites**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx -c Debug`
 Expected: 0 errors.
@@ -186,7 +186,7 @@ Expected: PASS, 0 failures (this task adds no new tests but must not break the e
 Run: `./TheKameleon.Superpowers.IntegrationTests/bin/Debug/net8.0-windows8.0/TheKameleon.Superpowers.IntegrationTests.exe`
 Expected: PASS, 0 failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Vsix/SuperpowersViewModel.cs
@@ -208,4 +208,4 @@ Launch the experimental instance (F5), open the Superpowers tool window, and ver
 4. Remove a row (freeing up its function), then click **Add row** — confirm the freed-up function becomes available again as the new row's default.
 5. Save preferences with a full, non-conflicting set of rows, reopen the tool window — confirm everything still loads correctly and editing an existing loaded row's function still respects the conflict check (try changing a loaded row's function to one another loaded row already uses).
 
-- [ ] **Step 2: No commit for this task** — verification only.
+- [x] **Step 2: No commit for this task** — verification only.

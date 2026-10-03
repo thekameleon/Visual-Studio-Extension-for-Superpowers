@@ -1,6 +1,6 @@
 # Copilot Model Preferences Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Let a user record, per Superpowers function (Plan/Execute/Debug/TDD/Review/Verify/Refactor/Finish/General), which Copilot model they want that function's custom agent to use, and have the extension write that preference into the generated `.agent.md` file(s) so Copilot Chat honors it automatically when that agent is selected.
 
@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `CopilotModel(string Name, string Provider, string ReleaseStatus)`, `CopilotModelPlanAvailability(string Name, bool Pro, bool ProPlus, bool Max, bool Business, bool Enterprise)`, `CopilotPlan` enum, `CopilotModelCatalog(IReadOnlyList<CopilotModel> Models, IReadOnlyList<CopilotModelPlanAvailability> PlanAvailability, DateTimeOffset FetchedAtUtc)`, and `FlatYamlListParser.Parse(string yaml) -> IReadOnlyList<IReadOnlyDictionary<string, string>>` — every later task in this plan consumes these exact names and signatures.
 
-- [ ] **Step 1: Write the failing parser tests**
+- [x] **Step 1: Write the failing parser tests**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Models;
@@ -93,12 +93,12 @@ public sealed class FlatYamlListParserTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.FlatYamlListParserTests`
 Expected: FAIL — `FlatYamlListParser` and `CopilotModel`/etc. do not exist yet.
 
-- [ ] **Step 3: Create the contracts**
+- [x] **Step 3: Create the contracts**
 
 ```csharp
 namespace TheKameleon.Superpowers.Skills.Models;
@@ -130,7 +130,7 @@ public sealed record CopilotModelCatalog(
     DateTimeOffset FetchedAtUtc);
 ```
 
-- [ ] **Step 4: Implement the parser**
+- [x] **Step 4: Implement the parser**
 
 ```csharp
 namespace TheKameleon.Superpowers.Skills.Models;
@@ -188,12 +188,12 @@ public static class FlatYamlListParser
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.FlatYamlListParserTests`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/CopilotModelCatalog.cs TheKameleon.Superpowers.Skills/Models/FlatYamlListParser.cs TheKameleon.Superpowers.Tests/FlatYamlListParserTests.cs
@@ -214,7 +214,7 @@ git commit -m "feat: add Copilot model catalog contracts and flat-YAML parser"
 
 Use `System.Net.Http.HttpMessageHandler`-backed fake responses for tests (a small in-file `FakeHttpMessageHandler : HttpMessageHandler` that returns a scripted status/body per request URL), matching how `ApprovedReleaseDownloadService` is exercised elsewhere in this test project — check `TheKameleon.Superpowers.Tests/ApprovedReleaseDownloadServiceTests.cs` for the existing fake-handler pattern before writing a new one.
 
-- [ ] **Step 1: Write the failing fetcher tests**
+- [x] **Step 1: Write the failing fetcher tests**
 
 ```csharp
 using System.Net;
@@ -289,12 +289,12 @@ public sealed class CopilotModelCatalogFetcherTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.CopilotModelCatalogFetcherTests`
 Expected: FAIL — `CopilotModelCatalogFetcher` does not exist yet.
 
-- [ ] **Step 3: Implement the fetcher**
+- [x] **Step 3: Implement the fetcher**
 
 ```csharp
 using System.Net;
@@ -428,12 +428,12 @@ public sealed class CopilotModelCatalogFetcher(HttpClient httpClient)
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.CopilotModelCatalogFetcherTests`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/CopilotModelCatalogFetcher.cs TheKameleon.Superpowers.Tests/CopilotModelCatalogFetcherTests.cs
@@ -454,7 +454,7 @@ git commit -m "feat: add never-throwing fetcher for the Copilot model catalog"
 
 Follow `InstallStateStore.cs` exactly: `WriteIndented = true`, camelCase, atomic write via a `.tmp` file and `File.Move(..., overwrite: true)`, `Load()` returns `null` (not throw) on missing file or `JsonException`. Use `TestSupport`-style temp profile helpers already present in the test project (see `TempProfile` used by `BundledReleaseInstallTests.cs`) for the test's isolated `ProfilePaths`.
 
-- [ ] **Step 1: Write the failing store tests**
+- [x] **Step 1: Write the failing store tests**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Models;
@@ -503,12 +503,12 @@ public sealed class ModelCatalogCacheStoreTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.ModelCatalogCacheStoreTests`
 Expected: FAIL — `ModelCatalogCacheStore` does not exist yet.
 
-- [ ] **Step 3: Implement the store**
+- [x] **Step 3: Implement the store**
 
 ```csharp
 using System.Text.Json;
@@ -554,12 +554,12 @@ public sealed class ModelCatalogCacheStore(ProfilePaths paths)
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.ModelCatalogCacheStoreTests`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/ModelCatalogCacheStore.cs TheKameleon.Superpowers.Tests/ModelCatalogCacheStoreTests.cs
@@ -578,7 +578,7 @@ git commit -m "feat: cache the last successfully fetched Copilot model catalog"
 **Interfaces:**
 - Produces: `SuperpowersFunction` enum (`General, Plan, Execute, Debug, Tdd, Review, Verify, Refactor, Finish`), `ModelPreference(SuperpowersFunction Function, string Family, string Model)`, `ModelPreferences { int SchemaVersion, CopilotPlan Plan, IReadOnlyList<ModelPreference> Preferences }` with `ModelPreferences.Empty`, and `ModelPreferencesStore(ProfilePaths paths).Load() -> ModelPreferences` / `.Save(ModelPreferences)` — Task 5 and Task 6 both consume `SuperpowersFunction` and `ModelPreferences` by these exact names.
 
-- [ ] **Step 1: Write the failing store tests**
+- [x] **Step 1: Write the failing store tests**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Models;
@@ -637,12 +637,12 @@ public sealed class ModelPreferencesStoreTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.ModelPreferencesStoreTests`
 Expected: FAIL — types do not exist yet.
 
-- [ ] **Step 3: Add the contracts**
+- [x] **Step 3: Add the contracts**
 
 ```csharp
 namespace TheKameleon.Superpowers.Skills.Models;
@@ -676,7 +676,7 @@ public sealed record ModelPreferences
 }
 ```
 
-- [ ] **Step 4: Implement the store**
+- [x] **Step 4: Implement the store**
 
 ```csharp
 using System.Text.Json;
@@ -727,12 +727,12 @@ public sealed class ModelPreferencesStore(ProfilePaths paths)
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.ModelPreferencesStoreTests`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/ModelPreferences.cs TheKameleon.Superpowers.Skills/Models/ModelPreferencesStore.cs TheKameleon.Superpowers.Tests/ModelPreferencesStoreTests.cs
@@ -753,7 +753,7 @@ git commit -m "feat: store per-function Copilot model preferences and self-repor
 
 First check the current file (already read this session — `TheKameleon.Superpowers.Skills/Bootstrap/AgentFileWriter.cs`) so the diff below applies cleanly against `BuildContent`, `Write`, and the existing `AgentFileOutcome`/`AgentFileStatus` types, which are unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Bootstrap;
@@ -796,12 +796,12 @@ public sealed class AgentFileWriterTests
 }
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.AgentFileWriterTests`
 Expected: FAIL — `BuildContent` does not accept a `model` parameter yet; `WriteFunctionAgent`/`FunctionAgentFilePath` do not exist.
 
-- [ ] **Step 3: Add `InstalledFunctionAgentFile` and bump `InstallState` to schema 2**
+- [x] **Step 3: Add `InstalledFunctionAgentFile` and bump `InstallState` to schema 2**
 
 Modify `TheKameleon.Superpowers.Skills/Install/InstallState.cs`:
 
@@ -860,7 +860,7 @@ Modify `TheKameleon.Superpowers.Skills/Install/InstallStateStore.cs` so an exist
             return new InstallStateLoad(InstallStateStatus.Loaded, state);
 ```
 
-- [ ] **Step 4: Extend `AgentFileWriter`**
+- [x] **Step 4: Extend `AgentFileWriter`**
 
 Replace `BuildContent` and add the new members in `TheKameleon.Superpowers.Skills/Bootstrap/AgentFileWriter.cs`:
 
@@ -1006,7 +1006,7 @@ public sealed class AgentFileWriter(ProfilePaths paths)
 
 Note `Write`'s new optional `model` parameter defaults to `null`, so every existing call site (`SuperpowersSetup.InstallCore`, `RefreshAgent`) keeps compiling unchanged until Task 6 updates them deliberately.
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.AgentFileWriterTests`
 Expected: PASS. Also re-run the full unit suite here — this task touches `InstallState`'s schema, and `InstallStateStoreTests.cs` / `BundledReleaseInstallTests.cs` must still pass unchanged.
@@ -1014,7 +1014,7 @@ Expected: PASS. Also re-run the full unit suite here — this task touches `Inst
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Bootstrap/AgentFileWriter.cs TheKameleon.Superpowers.Skills/Install/InstallState.cs TheKameleon.Superpowers.Skills/Install/InstallStateStore.cs TheKameleon.Superpowers.Tests/AgentFileWriterTests.cs
@@ -1033,7 +1033,7 @@ git commit -m "feat: write per-function agent files with an optional model, migr
 - Consumes: `ModelPreferences`, `ModelPreference`, `SuperpowersFunction` (Task 4); `AgentFileWriter.WriteFunctionAgent`, `RemoveFunctionAgent` (Task 5).
 - Produces: `SuperpowersSetup.Install(InstalledRelease, SkillArchiveReadResult, bool overwriteEdited, ModelPreferences? modelPreferences = null)` and the equivalent addition to `Repair` — the ViewModel (Task 7) calls these with the user's saved preferences.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Install;
@@ -1069,12 +1069,12 @@ public sealed class SuperpowersSetupModelPreferencesTests
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.SuperpowersSetupModelPreferencesTests`
 Expected: FAIL — `Install` does not accept a `ModelPreferences` argument yet.
 
-- [ ] **Step 3: Update `SuperpowersSetup`**
+- [x] **Step 3: Update `SuperpowersSetup`**
 
 In `TheKameleon.Superpowers.Skills/Setup/SuperpowersSetup.cs`, add the `using TheKameleon.Superpowers.Skills.Models;` import, change the `Install` signature and its call into `InstallCore`, and change `InstallCore` itself:
 
@@ -1165,12 +1165,12 @@ In `TheKameleon.Superpowers.Skills/Setup/SuperpowersSetup.cs`, add the `using Th
 
 Also update `Remove()` to remove any function agent files: replace the `skills.Remove(...)` block's surrounding code so it also calls `agent.RemoveFunctionAgent` for every entry in `load.State.FunctionAgentFiles`, appending an "edited, kept" message for any that come back `EditedNotRemoved`, mirroring the existing `agent.Remove(load.State.AgentFile)` handling immediately below it.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures (full suite — this task changes a widely-used method signature).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Setup/SuperpowersSetup.cs TheKameleon.Superpowers.Tests/SuperpowersSetupModelPreferencesTests.cs
@@ -1190,7 +1190,7 @@ git commit -m "feat: install/repair/remove per-function agent files alongside sk
 
 This is a WPF ViewModel, not a unit-testable pure function — there is no dedicated xUnit test for this task; correctness is verified in Task 9's manual verification pass, consistent with how `SuperpowersViewModel`'s existing command methods (`InstallAsync`, `CheckForUpdatesAsync`, etc.) have no direct unit tests today.
 
-- [ ] **Step 1: Add the row view-model and backing fields**
+- [x] **Step 1: Add the row view-model and backing fields**
 
 Add near the top of `SuperpowersViewModel.cs`, after the existing `using` block, a small bindable row type (it needs `[DataContract]`/`[DataMember]` like the rest of this file, and `NotifyPropertyChangedObject` for two-way binding of its own fields):
 
@@ -1261,7 +1261,7 @@ and register the new commands alongside the existing ones:
             this.SaveModelPreferencesCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SaveModelPreferencesAsync, cancellationToken));
 ```
 
-- [ ] **Step 2: Add the bindable members and command implementations**
+- [x] **Step 2: Add the bindable members and command implementations**
 
 Add after the existing `CheckForUpdatesCommand` member:
 
@@ -1333,7 +1333,7 @@ Add the method bodies near `CheckForUpdatesAsync`:
         }
 ```
 
-- [ ] **Step 3: Load saved preferences into `FunctionRows` on startup**
+- [x] **Step 3: Load saved preferences into `FunctionRows` on startup**
 
 In `LoadAsync`, after the existing `await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);` line at the end of the method, add:
 
@@ -1344,7 +1344,7 @@ In `LoadAsync`, after the existing `await this.RefreshStatusAsync(cancellationTo
             this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(p.Function) { Family = p.Family, Model = p.Model }));
 ```
 
-- [ ] **Step 4: Pass saved preferences into Install and Repair**
+- [x] **Step 4: Pass saved preferences into Install and Repair**
 
 In `InstallAsync`, change the call:
 
@@ -1362,7 +1362,7 @@ In `RepairAsync`, change the call:
                 cancellationToken).ConfigureAwait(false);
 ```
 
-- [ ] **Step 5: Build and run the full unit suite**
+- [x] **Step 5: Build and run the full unit suite**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: 0 errors.
@@ -1370,7 +1370,7 @@ Expected: 0 errors.
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures (this task only touches the Vsix project, but confirms nothing downstream broke).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Vsix/SuperpowersViewModel.cs
@@ -1387,7 +1387,7 @@ git commit -m "feat: add model catalog refresh and per-function preference rows 
 **Interfaces:**
 - Consumes: every bindable member added in Task 7 (`ModelCatalogStatusText`, `SelectedPlan`, `PlanOptions`, `FunctionRows`, `RefreshModelCatalogCommand`, `AddPreferenceRowCommand`, `RemovePreferenceRowCommand`, `SaveModelPreferencesCommand`, and `ModelPreferenceRow.FunctionLabel`/`Family`/`Model`).
 
-- [ ] **Step 1: Add the section**
+- [x] **Step 1: Add the section**
 
 Insert a new block immediately after the existing `<TextBlock Text="Using Superpowers" ... />` / `Tips` `ItemsControl` block, before the closing `</StackPanel>` (the one right before `</ScrollViewer>`):
 
@@ -1438,12 +1438,12 @@ Insert a new block immediately after the existing `<TextBlock Text="Using Superp
                 </StackPanel>
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: 0 errors. (XAML binding typos surface at runtime, not build time — Task 9 covers manual verification of the bindings.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Vsix/SuperpowersToolWindowControl.xaml
@@ -1460,16 +1460,16 @@ git commit -m "feat: add model preferences section to the status panel"
 **Interfaces:**
 - Consumes: `InstallState.FunctionAgentFiles` (Task 5).
 
-- [ ] **Step 1: Decide whether `StatusProbe` needs a function-agent-file check**
+- [x] **Step 1: Decide whether `StatusProbe` needs a function-agent-file check**
 
 Read `TheKameleon.Superpowers.Skills/Status/StatusProbe.cs`'s existing `AlwaysOnCheck` and agent-file checks. If it already reports on `state.AgentFile` generically (e.g., "the Superpowers agent is missing/edited"), add a parallel, best-effort check that reports any `FunctionAgentFiles` entry whose file is missing from disk (edited-or-removed-by-hand is not an error state — same tolerance the existing agent check gives the General file). Keep this to a `StatusLevel.Warning`, never `Fail` — a missing function agent file only means that function falls back to the General agent's model (or none), not a broken install.
 
-- [ ] **Step 2: Build the full solution**
+- [x] **Step 2: Build the full solution**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx -c Debug`
 Expected: 0 errors.
 
-- [ ] **Step 3: Run both full test suites**
+- [x] **Step 3: Run both full test suites**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures.
@@ -1486,7 +1486,7 @@ Launch the experimental instance (F5 or `devenv /rootsuffix Exp`), open the Supe
 4. Selecting **Install** with a saved Review-function preference produces `%USERPROFILE%\.github\agents\superpowers-review.agent.md` containing `model: <the saved value>` in its front matter, alongside the unchanged `superpowers.agent.md`.
 5. In Copilot Chat's agent picker, both `Superpowers` and `Superpowers-review` (or whatever functions were configured) appear as separate agents.
 
-- [ ] **Step 5: Commit any `StatusProbe` change from Step 1**
+- [x] **Step 5: Commit any `StatusProbe` change from Step 1**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Status/StatusProbe.cs

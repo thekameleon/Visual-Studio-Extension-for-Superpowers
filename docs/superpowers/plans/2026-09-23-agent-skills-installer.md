@@ -1,6 +1,6 @@
 # Agent Skills Installer Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rebuild the extension as an installer, version manager and status panel that puts unmodified upstream Superpowers skills plus a *Superpowers* custom agent into the user's profile, so VS 2026 Copilot Chat uses them natively.
 
@@ -90,12 +90,12 @@ The default Visual Studio `.gitignore` rule `[Rr]eleases/` hides `bundled-catalo
 
 **Interfaces:** Consumes nothing. Produces the committed archives that every later catalog test relies on.
 
-- [ ] **Step 1: Run the existing real-catalog test to see it fail in a clean checkout**
+- [x] **Step 1: Run the existing real-catalog test to see it fail in a clean checkout**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~BundledCatalogLoaderTests.LoadsBundledCatalogFromRealDirectory"`
 Expected: FAIL with diagnostics such as `SPCAT415 ... missing its bundled source archive`.
 
-- [ ] **Step 2: Re-include the releases folder in `.gitignore`**
+- [x] **Step 2: Re-include the releases folder in `.gitignore`**
 
 Directly after the line `[Rr]eleases/` add:
 
@@ -104,7 +104,7 @@ Directly after the line `[Rr]eleases/` add:
 !bundled-catalog/**/releases/
 ```
 
-- [ ] **Step 3: Copy the archives from the maintainer's local catalog**
+- [x] **Step 3: Copy the archives from the maintainer's local catalog**
 
 The only existing copy is in the main checkout. Copy it (PowerShell, from the repository root):
 
@@ -114,7 +114,7 @@ Copy-Item -Recurse -Force "C:\Users\kamel\source\repos\TheKameleon.Superpowers.V
 
 If that folder is unavailable, regenerate with `build/Generate-BundledCatalog.ps1` instead and commit the regenerated `catalog.json` too.
 
-- [ ] **Step 4: Confirm git now sees the files and the test passes**
+- [x] **Step 4: Confirm git now sees the files and the test passes**
 
 Run: `git check-ignore -v bundled-catalog/obra.superpowers/2026-09-21/releases/v6.4.1/source.zip`
 Expected: no output (not ignored).
@@ -122,7 +122,7 @@ Expected: no output (not ignored).
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~BundledCatalogLoaderTests.LoadsBundledCatalogFromRealDirectory"`
 Expected: PASS. If it fails with `SPCAT418`/`SPCAT421`, the copied archives do not match the committed `catalog.json`; stop and report rather than editing hashes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .gitignore bundled-catalog/obra.superpowers/2026-09-21/releases
@@ -148,7 +148,7 @@ Delete the bridge, context capture, prompt/workflow and execution code (spec §1
 
 **Interfaces:** Consumes nothing. Produces `internal sealed class SuperpowersViewModel` (placeholder with `[DataMember] string StatusText`), replaced in Task 13. The VSIX becomes the build-version **Owner**.
 
-- [ ] **Step 1: Delete the files listed above**
+- [x] **Step 1: Delete the files listed above**
 
 ```bash
 git rm -r -q TheKameleon.Superpowers.InProcess TheKameleon.Superpowers.Bridge.Contracts build/BridgeDebugDeployment.targets scripts/Prepare-BridgeDebug.ps1
@@ -159,7 +159,7 @@ cd TheKameleon.Superpowers.Tests && git rm -q ActionPolicyEvaluatorTests.cs Acti
 cd TheKameleon.Superpowers.IntegrationTests && git rm -q BridgeDebugDeploymentTests.cs InProcessBridgePackageTests.cs WorkflowArtifactsPackageTests.cs && cd ..
 ```
 
-- [ ] **Step 2: Update the solution file**
+- [x] **Step 2: Update the solution file**
 
 Replace the whole content of `TheKameleon.Superpowers.slnx` with:
 
@@ -175,7 +175,7 @@ Replace the whole content of `TheKameleon.Superpowers.slnx` with:
 </Solution>
 ```
 
-- [ ] **Step 3: Update the project files**
+- [x] **Step 3: Update the project files**
 
 In `TheKameleon.Superpowers.Skills.csproj` delete the line:
 
@@ -208,7 +208,7 @@ In `TheKameleon.Superpowers.Vsix.csproj`:
 - delete the `TheKameleon.Superpowers.InProcess` `ProjectReference`;
 - delete `<Import Project="..\build\BridgeDebugDeployment.targets" />`.
 
-- [ ] **Step 4: Make the build-version targets work with the VSIX as owner**
+- [x] **Step 4: Make the build-version targets work with the VSIX as owner**
 
 In `build/SuperpowersBuildVersion.targets`:
 
@@ -225,7 +225,7 @@ In `build/SuperpowersBuildVersion.targets`:
 
 In `TheKameleon.Superpowers.IntegrationTests/BuildVersionTests.cs` replace both occurrences of `SuperpowersBridgeVersionFile` (lines 24 and 133) with `SuperpowersBuildVersionFile`. If `ConsumerFailsWhenDependencyStampIsMissing` asserts the old error text (`Build the bridge dependency…`), update the expected text to `Build the version owner before this project`.
 
-- [ ] **Step 5: Replace the tool window with a placeholder**
+- [x] **Step 5: Replace the tool window with a placeholder**
 
 Create `TheKameleon.Superpowers.Vsix/SuperpowersViewModel.cs`:
 
@@ -338,7 +338,7 @@ In `SuperpowersExtension.cs` reduce the menu children to `MenuChild.Command<Plan
 }
 ```
 
-- [ ] **Step 6: Update the integration tests that referenced removed code**
+- [x] **Step 6: Update the integration tests that referenced removed code**
 
 Replace the body of `BuildIdentityPackageTests.BothPackagesAndTheirDllsShareOneBuildVersion` (rename the method to `PackageAndDllShareOneBuildVersion`) with:
 
@@ -355,7 +355,7 @@ In `ExtensionPackageTests.cs` delete the `BuildDependencyDoesNotBundleBridgeRunt
 
 In `PlanToolWindowPackageTests.cs` delete these test methods: `PackageRegistersCapabilityProbeCommand`, `PackageEmbedsRemoteViewWithWorkflowBindings`, `PackageEmbedsHistorySearchAndPlanCompositionControlsWithAccessibleNames`, `WorkflowViewModelDeclaresRemoteUiSerializationAttributes`. Keep the private helpers.
 
-- [ ] **Step 7: Build and run all tests**
+- [x] **Step 7: Build and run all tests**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: Build succeeded, 0 errors. If a kept file fails to compile because it references a deleted type, the delete list is wrong: stop and report the type and file rather than deleting more.
@@ -366,7 +366,7 @@ Expected: PASS (the remaining catalog/parser tests).
 Run: `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A
@@ -389,7 +389,7 @@ git commit -m "refactor: retire bridge, context capture, prompt and execution su
 - Produces: `static LoadedCatalogRelease? ReleaseSelection.DefaultRelease(IEnumerable<LoadedCatalogRelease> releases)`.
 - Produces test helpers `TestSupport.RepositoryPath(params string[])`, `TestSupport.Release(string tag, bool prerelease, DateTimeOffset published, bool hasError = false)`.
 
-- [ ] **Step 1: Write the test helpers**
+- [x] **Step 1: Write the test helpers**
 
 Create `TheKameleon.Superpowers.Tests/TestSupport.cs`:
 
@@ -441,7 +441,7 @@ internal static class TestSupport
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/ReleaseSelectionTests.cs`:
 
@@ -502,12 +502,12 @@ Add to `BundledCatalogLoaderTests.cs`:
     }
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~ReleaseSelectionTests|FullyQualifiedName~ExposesArchivePath"`
 Expected: build FAIL — `ArchivePath`, `IsPrerelease`, `PublishedAtUtc` and `ReleaseSelection` do not exist.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Replace `LoadedCatalogRelease.cs` body so the record keeps its constructor and gains three init properties:
 
@@ -594,12 +594,12 @@ public static class ReleaseSelection
 
 In `BundledCatalogLoaderTests.cs` replace the private `GetRepositoryRelativePath(...)` calls with `TestSupport.RepositoryPath(...)` and delete the private helper.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -623,7 +623,7 @@ The existing `SkillDocumentParser` rejects `../` and `https://` links that some 
 - Produces: `static IReadOnlyList<string> SkillValidator.Validate(SkillPackage package)`; an empty list means valid.
 - Produces test helpers `TestSupport.Skill(string name, params (string Path, string Content)[] extraFiles)` and `TestSupport.SkillWithMarkdown(string folderName, string skillMarkdown)`.
 
-- [ ] **Step 1: Add test helpers**
+- [x] **Step 1: Add test helpers**
 
 Append to `TestSupport` (add `using System.Text;` and `using TheKameleon.Superpowers.Skills.Install;`):
 
@@ -651,7 +651,7 @@ Append to `TestSupport` (add `using System.Text;` and `using TheKameleon.Superpo
     }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/SkillValidatorTests.cs`:
 
@@ -714,12 +714,12 @@ public sealed class SkillValidatorTests
 }
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillValidatorTests"`
 Expected: build FAIL — `SkillPackage`, `SkillValidator`, `SkillFrontMatter` do not exist.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 `TheKameleon.Superpowers.Skills/Install/SkillPackage.cs`:
 
@@ -894,12 +894,12 @@ public static class SkillValidator
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillValidatorTests"`
 Expected: PASS (all cases).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -921,7 +921,7 @@ git commit -m "feat: validate skills against Visual Studio Agent Skills front-ma
 - Produces: `static SkillArchiveReadResult SkillArchiveReader.Read(Stream archiveStream, SkillArchiveLimits? limits = null)`.
 - Produces: `static SkillArchiveReadResult ReleaseSkillLoader.Load(string catalogRoot, LoadedCatalogRelease release)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/SkillArchiveReaderTests.cs`:
 
@@ -1033,12 +1033,12 @@ public sealed class SkillArchiveReaderTests
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillArchiveReaderTests"`
 Expected: build FAIL — `SkillArchiveReader`, `SkillArchiveLimits`, `ReleaseSkillLoader` do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Install/SkillArchiveReader.cs`:
 
@@ -1169,12 +1169,12 @@ public static class ReleaseSkillLoader
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillArchiveReaderTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1198,7 +1198,7 @@ git commit -m "feat: read upstream skill folders safely from release archives"
 - Produces: `static IDisposable InstallLock.Acquire(TimeSpan timeout)` (throws `TimeoutException`).
 - Produces test helper `TempProfile : IDisposable` with `Paths`.
 
-- [ ] **Step 1: Write the test helper and failing tests**
+- [x] **Step 1: Write the test helper and failing tests**
 
 Create `TheKameleon.Superpowers.Tests/TempProfile.cs`:
 
@@ -1320,12 +1320,12 @@ public sealed class InstallStateStoreTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~InstallStateStoreTests"`
 Expected: build FAIL — types do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `Install/ProfilePaths.cs`:
 
@@ -1519,12 +1519,12 @@ public static class InstallLock
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~InstallStateStoreTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1550,7 +1550,7 @@ git commit -m "feat: add profile paths, install state store and cross-process in
   - `IReadOnlyList<string> FindConflicts(IEnumerable<SkillPackage> packages, IReadOnlyList<InstalledSkill> owned)`
   - `static InstalledSkill Describe(SkillPackage package)`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/SkillInstallerTests.cs`:
 
@@ -1713,12 +1713,12 @@ public sealed class SkillInstallerTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillInstallerTests"`
 Expected: build FAIL — `SkillInstaller` does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Install/SkillInstaller.cs`:
 
@@ -1951,12 +1951,12 @@ public sealed class SkillInstaller(ProfilePaths paths)
 
 Note: `RollBack` runs only for swaps that were recorded. In `RollsBackEverySwapWhenOneFails` the failure is `Directory.Move(beta, backup)` for beta, which throws before beta's swap is recorded, so rollback restores alpha only and beta is untouched.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SkillInstallerTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1977,7 +1977,7 @@ git commit -m "feat: install skills with ownership tracking, conflict detection 
 - Produces: `enum AgentFileStatus { Written, UpToDate, EditedKept, Removed, EditedNotRemoved, Missing }`, `record AgentFileOutcome(AgentFileStatus Status, InstalledAgentFile? Agent)`.
 - Produces on `AgentFileWriter(ProfilePaths paths)`: `static string BuildContent()`, `bool IsEdited(InstalledAgentFile? recorded)`, `AgentFileOutcome Write(InstalledAgentFile? recorded, bool overwriteEdited)`, `AgentFileOutcome Remove(InstalledAgentFile? recorded)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/AgentFileWriterTests.cs`:
 
@@ -2076,12 +2076,12 @@ public sealed class AgentFileWriterTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~AgentFileWriterTests"`
 Expected: build FAIL — types do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Bootstrap/BootstrapText.cs` (text copied verbatim from spec §8):
 
@@ -2193,12 +2193,12 @@ public sealed class AgentFileWriter(ProfilePaths paths)
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~AgentFileWriterTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2218,7 +2218,7 @@ git commit -m "feat: add versioned Copilot bootstrap and Superpowers agent file 
 - Produces: `enum BlockEditStatus { Changed, Unchanged, MalformedMarkers }`, `record BlockEditResult(BlockEditStatus Status, string Text)`, `static class AlwaysOnBlockEditor` with `BeginMarker`, `EndMarker`, `Apply(string text, string body, string newline)`, `Remove(string text)`, `IsPresent(string text)`.
 - Produces: `enum AlwaysOnStatus { Enabled, Disabled, Unchanged, MalformedMarkers }`, `record AlwaysOnOutcome(AlwaysOnStatus Status, AlwaysOnState State)`, `class AlwaysOnInstructionsFile(ProfilePaths paths)` with `Enable(AlwaysOnState current)`, `Disable(AlwaysOnState current)`, `bool IsBlockPresent()`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/AlwaysOnTests.cs`:
 
@@ -2347,12 +2347,12 @@ public sealed class AlwaysOnTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~AlwaysOnTests"`
 Expected: build FAIL — types do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Bootstrap/AlwaysOnBlockEditor.cs`:
 
@@ -2574,12 +2574,12 @@ public sealed class AlwaysOnInstructionsFile(ProfilePaths paths)
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~AlwaysOnTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2606,7 +2606,7 @@ git commit -m "feat: manage the optional always-on bootstrap block in user Copil
   - `SetupResult SetAlwaysOn(bool enabled)`
   - `SetupResult RefreshAgent()`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/SuperpowersSetupTests.cs`:
 
@@ -2738,12 +2738,12 @@ public sealed class SuperpowersSetupTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SuperpowersSetupTests"`
 Expected: build FAIL — `SuperpowersSetup` does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Setup/SuperpowersSetup.cs`:
 
@@ -2907,12 +2907,12 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
 
 `Repair` compares the agent file with the bytes `AgentFileWriter.Write` produces. `Write` encodes with UTF-8 without BOM, and `Encoding.UTF8.GetBytes` also emits no BOM, so the hashes match.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~SuperpowersSetupTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2933,7 +2933,7 @@ git commit -m "feat: add SuperpowersSetup facade for install, repair, remove and
 - Produces: `StatusProbe(ProfilePaths paths).Run(string? copilotLogDirectory) -> IReadOnlyList<StatusCheck>`.
 - Produces: `static string CopilotLogDiagnostic.DefaultLogDirectory`, `static StatusCheck CopilotLogDiagnostic.Diagnose(string logDirectory, ProfilePaths paths)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/StatusProbeTests.cs`:
 
@@ -3051,12 +3051,12 @@ public sealed class StatusProbeTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~StatusProbeTests"`
 Expected: build FAIL — types do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `TheKameleon.Superpowers.Skills/Status/CopilotLogDiagnostic.cs`:
 
@@ -3208,12 +3208,12 @@ public sealed class StatusProbe(ProfilePaths paths)
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~StatusProbeTests"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -3229,7 +3229,7 @@ git commit -m "feat: add install status checks and best-effort Copilot discovery
 
 **Interfaces:** Consumes `BundledCatalogLoader`, `ReleaseSkillLoader`, `SuperpowersSetup`, `SkillFrontMatter`, `SkillValidator`. Produces nothing new.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `TheKameleon.Superpowers.Tests/BundledReleaseInstallTests.cs`:
 
@@ -3292,12 +3292,12 @@ public sealed class BundledReleaseInstallTests
 }
 ```
 
-- [ ] **Step 2: Run the test**
+- [x] **Step 2: Run the test**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~BundledReleaseInstallTests"`
 Expected: PASS for all 13 releases plus the newest-release fact. If an older release reports `Partial`, that is allowed; read the messages. If any release is `Failed`, stop and report the messages; do not loosen the assertion.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A
@@ -3317,7 +3317,7 @@ git commit -m "test: install every bundled Superpowers release into a temporary 
 
 **Interfaces:** Consumes `SuperpowersSetup`, `ReleaseSkillLoader`, `ReleaseSelection`, `BundledCatalogLoader`, `StatusProbe`, `CopilotLogDiagnostic`, `ProfilePaths.ForCurrentUser()`. Produces the VSIX UI. Later tasks bind `HeaderIcon` (Task 14) and a download command (Task 18).
 
-- [ ] **Step 1: Write the failing package tests**
+- [x] **Step 1: Write the failing package tests**
 
 Rename the file and class: `git mv TheKameleon.Superpowers.IntegrationTests/PlanToolWindowPackageTests.cs TheKameleon.Superpowers.IntegrationTests/ToolWindowPackageTests.cs`, then rename `public class PlanToolWindowPackageTests` to `public class ToolWindowPackageTests`.
 
@@ -3387,12 +3387,12 @@ In `ToolWindowPackageTests.cs`:
 
 In `ExtensionPackageTests.cs` change `Assert.Equal("[17.14,)", (string?)target.Attribute("Version"));` to `Assert.Equal("[18.5,)", (string?)target.Attribute("Version"));`.
 
-- [ ] **Step 2: Run the package tests to verify they fail**
+- [x] **Step 2: Run the package tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj --filter "FullyQualifiedName~ToolWindowPackageTests|FullyQualifiedName~ManifestDeclaresSupportedVisualStudioArchitecture"`
 Expected: FAIL — `OpenSuperpowersCommand` is not registered, the XAML has none of the bindings, and the version range is `[17.14,)`.
 
-- [ ] **Step 3: Implement the command, extension metadata and resources**
+- [x] **Step 3: Implement the command, extension metadata and resources**
 
 Delete `PlanCommand.cs` (`git rm TheKameleon.Superpowers.Vsix/PlanCommand.cs`). Create `TheKameleon.Superpowers.Vsix/OpenSuperpowersCommand.cs`:
 
@@ -3441,7 +3441,7 @@ Replace `.vsextension/string-resources.json` with:
 }
 ```
 
-- [ ] **Step 4: Implement the view model**
+- [x] **Step 4: Implement the view model**
 
 Create `TheKameleon.Superpowers.Vsix/StatusItem.cs`:
 
@@ -3791,7 +3791,7 @@ In `SuperpowersToolWindow.cs` replace `GetContentAsync` with:
         }
 ```
 
-- [ ] **Step 5: Implement the view**
+- [x] **Step 5: Implement the view**
 
 Replace `TheKameleon.Superpowers.Vsix/SuperpowersToolWindowControl.xaml`:
 
@@ -3866,7 +3866,7 @@ Replace `TheKameleon.Superpowers.Vsix/SuperpowersToolWindowControl.xaml`:
 </DataTemplate>
 ```
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: Build succeeded.
@@ -3877,11 +3877,11 @@ Expected: PASS.
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj`
 Expected: PASS.
 
-- [ ] **Step 7: Smoke test in VS 2026**
+- [x] **Step 7: Smoke test in VS 2026**
 
 Press F5 on `TheKameleon.Superpowers.Vsix` (Exp instance). Open **Extensions ▸ Superpowers ▸ Open**. Expected: v6.4.1 preselected, status "not installed", the Install button enabled. **Do not click Install in the Exp instance unless you intend to change your real profile**; the Exp instance uses your real `%USERPROFILE%`. Close the Exp instance.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A
@@ -3900,7 +3900,7 @@ git commit -m "feat: replace the Plan window with the Superpowers installer tool
 
 **Interfaces:** Consumes the Task 13 UI. Produces the custom image moniker `Superpowers`.
 
-- [ ] **Step 1: Write the failing package tests**
+- [x] **Step 1: Write the failing package tests**
 
 Add to `ExtensionPackageTests.cs` (add `using System.IO.Compression;` and `using System.Xml.Linq;` if missing):
 
@@ -3932,12 +3932,12 @@ Add to `ExtensionPackageTests.cs` (add `using System.IO.Compression;` and `using
 
 If `ReadManifest(package)` in this file takes a different parameter type, use the same call pattern as `ManifestDeclaresSupportedVisualStudioArchitecture`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj --filter "FullyQualifiedName~ManifestDeclaresIconAndPreviewImageThatArePackaged|FullyQualifiedName~PackageContainsCommandIconImages"`
 Expected: FAIL — no `<Icon>`, no images.
 
-- [ ] **Step 3: Create the art master and render script**
+- [x] **Step 3: Create the art master and render script**
 
 `art/superpowers-icon.xaml`, an original design (a lightning bolt on a rounded square), drawn on a 32×32 canvas:
 
@@ -4006,7 +4006,7 @@ foreach ($target in $targets) {
 Run: `powershell.exe -NoProfile -STA -File build/Render-Icons.ps1`
 Expected: five "Rendered …" lines and the five PNG files exist.
 
-- [ ] **Step 4: Wire the images into the extension**
+- [x] **Step 4: Wire the images into the extension**
 
 In `TheKameleon.Superpowers.Vsix.csproj`, in the `ItemGroup` with the catalog `Content`, add:
 
@@ -4043,16 +4043,16 @@ In `SuperpowersToolWindowControl.xaml` add the namespace `xmlns:vs="http://schem
                 </StackPanel>
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj`
 Expected: PASS. If `PackageContainsCommandIconImages` still fails, the SDK did not pick up `Images\` automatically: add `<Content Include="Images\*.png" IncludeInVSIX="true" />` to the csproj and rerun.
 
-- [ ] **Step 6: Check it visually in VS 2026**
+- [x] **Step 6: Check it visually in VS 2026**
 
 F5 into Exp. Check that the Superpowers icon shows next to **Extensions ▸ Superpowers ▸ Open**, in the tool window header, and in **Manage Extensions** for the extension. Check light, dark and high-contrast themes. Record the result in the acceptance checklist (Task 15).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -4070,7 +4070,7 @@ git commit -m "feat: add original Superpowers icon to the menu, tool window and 
 
 **Interfaces:** Consumes the finished Phase 1 behavior. Produces user and contributor documentation.
 
-- [ ] **Step 1: Write the README**
+- [x] **Step 1: Write the README**
 
 Replace `README.md` with:
 
@@ -4124,7 +4124,7 @@ Manual acceptance on VS 2026: [docs/superpowers/acceptance/agent-skills-acceptan
 Superpowers skills are © Jesse Vincent and contributors, MIT licensed; each bundled release includes its `LICENSE.txt`. The icon is original artwork for this extension.
 ````
 
-- [ ] **Step 2: Write the acceptance checklist**
+- [x] **Step 2: Write the acceptance checklist**
 
 Create `docs/superpowers/acceptance/agent-skills-acceptance.md`:
 
@@ -4152,7 +4152,7 @@ Test solution: a small C# class library with `PriceCalculator.ApplyDiscount(deci
 A5 gates the release: if referenced skills are still not loaded, record the evidence and decide on the index-skill fallback (spec §13) before publishing.
 ```
 
-- [ ] **Step 3: Record the decisions in the canonical plan**
+- [x] **Step 3: Record the decisions in the canonical plan**
 
 In `docs/superpowers/plans/implementation-plan.md`, append these rows to the decision table in §2:
 
@@ -4169,14 +4169,14 @@ and append at the end of the file:
 | Agent Skills redirection | P08–P11 are replaced by [the Agent Skills installer plan](2026-09-23-agent-skills-installer.md), implementing [the design spec](../specs/2026-09-23-agent-skills-installer-design.md). The 2026-09-23 spike showed VS 2026 Copilot discovers `~/.copilot/skills` and user-level custom agents, and follows upstream skills once bootstrapped. |
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
 git commit -m "docs: rewrite README and add Agent Skills acceptance checklist"
 ```
 
-- [ ] **Step 5: Phase gate**
+- [x] **Step 5: Phase gate**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj` and `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj`
 Expected: both PASS. The repository rule requires the full unit and integration suites to pass before starting Phase 2. Then run the acceptance checklist rows A1–A8 and U1–U3 on VS 2026 and record the results.
@@ -4193,7 +4193,7 @@ Expected: both PASS. The repository rule requires the full unit and integration 
 
 **Interfaces:** Keeps `DownloadAndActivateAsync(DiscoveredRemoteRelease, string targetDirectory, bool approvalGranted, CancellationToken)`. Adds `public const int MaxArchiveEntries = 10_000;` and `public const long MaxExtractedBytes = 100L * 1024 * 1024;`. New diagnostic code `SPCAT612` (archive too large when extracted).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `ApprovedReleaseDownloadServiceTests.cs`:
 
@@ -4259,12 +4259,12 @@ Add to `ApprovedReleaseDownloadServiceTests.cs`:
 
 Rename the existing `PreservesExistingActiveDirectoryWhenActivationFails` to `PreservesExistingActiveDirectoryWhenLicenseIsMissing` (it fails on the missing license, not on activation).
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~ApprovedReleaseDownloadServiceTests"`
 Expected: the four new tests FAIL. `KeepsTheActiveReleaseWhenItCannotBeMovedAside` fails because the catch block deletes the target.
 
-- [ ] **Step 3: Implement the fixes**
+- [x] **Step 3: Implement the fixes**
 
 1. In `IsApprovedRelease` add scheme checks as the first two conditions:
 
@@ -4415,12 +4415,12 @@ and add the two constants under `MaxDownloadBytes`:
             }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~ApprovedReleaseDownloadServiceTests"`
 Expected: PASS, all tests including the existing ones.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -4443,7 +4443,7 @@ git commit -m "fix: require HTTPS, bound downloads and extraction, and never del
 - Produces: `static string DownloadedReleases.TargetDirectory(ProfilePaths paths, string releaseTag)` (throws `ArgumentException` for unsafe tags).
 - Produces: `static IReadOnlyList<AvailableRelease> DownloadedReleases.Load(ProfilePaths paths)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `TheKameleon.Superpowers.Tests/DownloadedReleasesTests.cs`:
 
@@ -4504,12 +4504,12 @@ public sealed class DownloadedReleasesTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj --filter "FullyQualifiedName~DownloadedReleasesTests"`
 Expected: build FAIL — `DownloadedReleases` does not exist.
 
-- [ ] **Step 3: Implement and delete the old cache code**
+- [x] **Step 3: Implement and delete the old cache code**
 
 Create `TheKameleon.Superpowers.Skills/Catalog/DownloadedReleases.cs`:
 
@@ -4576,7 +4576,7 @@ and add to `ApprovedReleaseDownloadServiceTests.DownloadsAndActivatesApprovedRel
         Assert.Equal(release.PublishedAtUtc.ToUnixTimeSeconds(), loaded.PublishedAtUtc!.Value.ToUnixTimeSeconds());
 ```
 
-- [ ] **Step 4: Build and run tests**
+- [x] **Step 4: Build and run tests**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: succeeded. If a kept file still references a deleted contract, stop and report it.
@@ -4584,7 +4584,7 @@ Expected: succeeded. If a kept file still references a deleted contract, stop an
 Run: `dotnet test TheKameleon.Superpowers.Tests/TheKameleon.Superpowers.Tests.csproj`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -4601,14 +4601,14 @@ git commit -m "refactor: replace catalog cache manager with per-release download
 
 **Interfaces:** Consumes `ApprovedReleaseDiscoveryService.DiscoverAsync(ReleaseChannelFilter, CancellationToken)`, `ApprovedReleaseDownloadService.DownloadAndActivateAsync(...)`, `DownloadedReleases` (Task 17), `AvailableRelease`. Produces `[DataMember] IAsyncCommand CheckForUpdatesCommand` and `[DataMember] bool IncludePrereleases`.
 
-- [ ] **Step 1: Write the failing package test**
+- [x] **Step 1: Write the failing package test**
 
 In `ToolWindowPackageTests.PackageEmbedsInstallerViewWithAccessibleCommands` add `"CheckForUpdatesCommand"` to the command array, and add to the property array in `ViewModelDeclaresRemoteUiSerializationAttributes`: `"IncludePrereleases"`.
 
 Run: `dotnet test TheKameleon.Superpowers.IntegrationTests/TheKameleon.Superpowers.IntegrationTests.csproj --filter "FullyQualifiedName~ToolWindowPackageTests"`
 Expected: FAIL — no such command or property.
 
-- [ ] **Step 2: Track each release's catalog root in the view model**
+- [x] **Step 2: Track each release's catalog root in the view model**
 
 In `SuperpowersViewModel`:
 
@@ -4737,7 +4737,7 @@ and pass `selected.Source` instead of `"bundled"` to `new InstalledRelease(...)`
         }
 ```
 
-- [ ] **Step 3: Add the controls to the view**
+- [x] **Step 3: Add the controls to the view**
 
 In `SuperpowersToolWindowControl.xaml`, directly after the release `Grid`, add:
 
@@ -4748,7 +4748,7 @@ In `SuperpowersToolWindowControl.xaml`, directly after the release `Grid`, add:
                 </StackPanel>
 ```
 
-- [ ] **Step 4: Run all tests**
+- [x] **Step 4: Run all tests**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`, then both `dotnet test` commands.
 Expected: all PASS.
@@ -4757,13 +4757,13 @@ Expected: all PASS.
 
 In the Exp instance: select **Check for newer releases**. With no newer upstream release, expect "You already have every published release." With **Include prereleases** checked, any newer prerelease should offer a download prompt; **Cancel** must change nothing. Add a row U4 for this to `docs/superpowers/acceptance/agent-skills-acceptance.md` and record the result.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
 git commit -m "feat: check GitHub for newer Superpowers releases and download them on request"
 ```
 
-- [ ] **Step 7: Phase gate**
+- [x] **Step 7: Phase gate**
 
 Run both test suites and acceptance rows U1–U4 again. Everything must pass before release work (Marketplace listing, signing) begins; release work is out of scope for this plan.

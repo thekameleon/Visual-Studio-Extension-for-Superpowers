@@ -1,6 +1,6 @@
 # Copilot Model List Suggestions Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Let a user actually see the models the extension fetched (I4, deferred from the prior "Copilot model preferences" plan), and, when they pick a function for a preference row, pre-fill a sensible suggested model for that function's blank Model field — mirroring the mechanical/integration/architecture-and-review model tiering `subagent-driven-development` already uses for Claude Code's own subagent dispatch, applied here to Copilot's own model categories instead.
 
@@ -35,7 +35,7 @@
 
 First read `TheKameleon.Superpowers.Skills/Models/CopilotModelCatalog.cs` and `TheKameleon.Superpowers.Skills/Models/CopilotModelCatalogFetcher.cs` as they currently exist (both already in the repo, post the prior plan's merge) so the diffs below apply cleanly.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `TheKameleon.Superpowers.Tests/CopilotModelCatalogFetcherTests.cs` (alongside its existing tests — do not remove any):
 
@@ -127,12 +127,12 @@ Also fix the existing `ReturnsCatalogOnSuccessfulFetch` test's `StubHttpMessageH
 
 And update the two existing direct `new CopilotModelCatalog(...)` call sites (one in this file, one in `ModelCatalogCacheStoreTests.cs`) to pass an empty `Array.Empty<CopilotModelCategory>()` as the new third positional argument (before `FetchedAtUtc`).
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.CopilotModelCatalogFetcherTests`
 Expected: FAIL to compile — `CopilotModelCategory` and `Categories` don't exist yet.
 
-- [ ] **Step 3: Add the contract**
+- [x] **Step 3: Add the contract**
 
 In `TheKameleon.Superpowers.Skills/Models/CopilotModelCatalog.cs`, add the new record and extend `CopilotModelCatalog`:
 
@@ -150,7 +150,7 @@ public sealed record CopilotModelCatalog(
     DateTimeOffset FetchedAtUtc);
 ```
 
-- [ ] **Step 4: Fetch and parse the third file, best-effort**
+- [x] **Step 4: Fetch and parse the third file, best-effort**
 
 In `TheKameleon.Superpowers.Skills/Models/CopilotModelCatalogFetcher.cs`, add the URL constant next to the existing two:
 
@@ -206,7 +206,7 @@ Replace that tail with:
 
 Note `DownloadTextAsync`'s existing problem messages ("Couldn't reach the model list...", "...has moved upstream...") already contain generic wording, not file-specific — that's fine and unchanged; the `SucceedsWithEmptyCategoriesWhenThePricingFetchFails` test only asserts a problem exists containing "category", which the `FormatException`-branch message satisfies for the reshaped case, and for the plain-404 case the existing `DownloadTextAsync` 404 message already contains the URL, not the word "category" — reread that test's assertion once you're implementing and loosen it if needed to match what `DownloadTextAsync` actually produces (assert on `Problems` being non-empty and `Categories` being empty, rather than requiring the literal substring "category", if the 404 case's message doesn't naturally contain it).
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.CopilotModelCatalogFetcherTests`
 Expected: PASS
@@ -214,7 +214,7 @@ Expected: PASS
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.ModelCatalogCacheStoreTests`
 Expected: PASS (after updating its `new CopilotModelCatalog(...)` call site)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/CopilotModelCatalog.cs TheKameleon.Superpowers.Skills/Models/CopilotModelCatalogFetcher.cs TheKameleon.Superpowers.Tests/CopilotModelCatalogFetcherTests.cs TheKameleon.Superpowers.Tests/ModelCatalogCacheStoreTests.cs
@@ -233,7 +233,7 @@ git commit -m "feat: fetch model weight-class categories as a best-effort third 
 - Consumes: `CopilotModelCatalog`, `CopilotModelCategory`, `CopilotModelPlanAvailability`, `CopilotPlan`, `SuperpowersFunction` (all existing).
 - Produces: `SuperpowersFunctionModelSuggestion.Suggest(CopilotModelCatalog? catalog, SuperpowersFunction function, CopilotPlan plan) -> string?` — Task 3 calls this exactly.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```csharp
 using TheKameleon.Superpowers.Skills.Models;
@@ -336,12 +336,12 @@ public sealed class SuperpowersFunctionModelSuggestionTests
 
 (Fix the slightly malformed `PrefersAPlanAvailableCandidateOverTheFirstMatch` test's construction above while implementing it — it was written with a stray record-init artifact; simplify to a single clean `new CopilotModelCatalog(Array.Empty<CopilotModel>(), planAvailability, categories, DateTimeOffset.UtcNow)` call with `planAvailability` and `categories` built as local variables first. The intent is clear: two Powerful models, only one of which (`Claude Opus 5`) is available on the `Pro` plan; the suggestion must prefer it over the alphabetically/insertion-order-first `Claude Opus 5` — wait, ensure the two model names in the category list are ordered so the NON-preferred one would be picked first if plan preference weren't applied, i.e. put `Claude Opus 5.5` before `Claude Opus 5` in the `Categories` array so the test actually proves the plan-preference logic works rather than passing by coincidence of list order.)
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.SuperpowersFunctionModelSuggestionTests`
 Expected: FAIL — `SuperpowersFunctionModelSuggestion` does not exist yet.
 
-- [ ] **Step 3: Implement the lookup**
+- [x] **Step 3: Implement the lookup**
 
 ```csharp
 namespace TheKameleon.Superpowers.Skills.Models;
@@ -419,12 +419,12 @@ public static class SuperpowersFunctionModelSuggestion
 
 The `SuggestedCategory[function]` indexer access is deliberate, not defensive `TryGetValue` — the dictionary is a closed, code-controlled mapping covering every `SuperpowersFunction` value; a missing entry is a maintenance bug (someone added an enum value without updating this table) that should fail loudly in tests (see `EveryEnumFunctionHasAMappedCategory` above), not be silently swallowed at runtime.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe -class TheKameleon.Superpowers.Tests.SuperpowersFunctionModelSuggestionTests`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Skills/Models/SuperpowersFunctionModelSuggestion.cs TheKameleon.Superpowers.Tests/SuperpowersFunctionModelSuggestionTests.cs
@@ -444,7 +444,7 @@ git commit -m "feat: suggest a model per Superpowers function from the fetched c
 
 No dedicated xUnit test — this is a WPF ViewModel, consistent with the rest of this file's untested command methods (same as Task 7 of the prior plan).
 
-- [ ] **Step 1: Add `ModelNameOptions` and a suggestion helper**
+- [x] **Step 1: Add `ModelNameOptions` and a suggestion helper**
 
 Add a bindable member near the existing `FunctionOptions`:
 
@@ -469,7 +469,7 @@ Add a private helper method (near `RefreshModelCatalogAsync`):
             SuperpowersFunctionModelSuggestion.Suggest(this.modelCatalog, function, this.SelectedPlan);
 ```
 
-- [ ] **Step 2: Populate `ModelNameOptions` on construction and on successful refresh**
+- [x] **Step 2: Populate `ModelNameOptions` on construction and on successful refresh**
 
 In the constructor, immediately after the existing line `this.modelCatalog = this.modelCatalogCacheStore.Load();`, add:
 
@@ -479,7 +479,7 @@ In the constructor, immediately after the existing line `this.modelCatalog = thi
 
 In `RefreshModelCatalogAsync`, in the success branch (after `this.modelCatalogCacheStore.Save(result.Catalog!);`), add a call to `this.RefreshModelNameOptions();` before setting `this.ModelCatalogStatusText`.
 
-- [ ] **Step 3: Make `ModelPreferenceRow.Function` trigger a suggestion when `Model` is blank**
+- [x] **Step 3: Make `ModelPreferenceRow.Function` trigger a suggestion when `Model` is blank**
 
 Change `ModelPreferenceRow`'s constructor and `Function` setter:
 
@@ -535,7 +535,7 @@ Change `ModelPreferenceRow`'s constructor and `Function` setter:
     }
 ```
 
-- [ ] **Step 4: Wire the suggestion callback into row construction**
+- [x] **Step 4: Wire the suggestion callback into row construction**
 
 In the constructor's `AddPreferenceRowCommand` registration, change:
 
@@ -557,7 +557,7 @@ In `LoadAsync`, the line that reconstructs rows from saved preferences must NOT 
 
 (No suggestion callback there — this is intentional, not an oversight; do not "fix" it to also pass `this.SuggestModel`.)
 
-- [ ] **Step 5: Build and run the full unit suite**
+- [x] **Step 5: Build and run the full unit suite**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: 0 errors.
@@ -565,7 +565,7 @@ Expected: 0 errors.
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Vsix/SuperpowersViewModel.cs
@@ -582,7 +582,7 @@ git commit -m "feat: suggest a model when a preference row's function changes, e
 **Interfaces:**
 - Consumes: `ModelNameOptions` (Task 3).
 
-- [ ] **Step 1: Replace the Model field's `TextBox` with an editable `ComboBox`**
+- [x] **Step 1: Replace the Model field's `TextBox` with an editable `ComboBox`**
 
 In the `FunctionRows` `ItemsControl`'s `DataTemplate`, find:
 
@@ -601,12 +601,12 @@ Replace it with:
 
 `IsEditable="True"` with `Text` bound (not `SelectedItem`) is what keeps free-text entry working exactly as before — the `ItemsSource` only supplies the dropdown suggestions; typing something not in the list is unaffected.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx`
 Expected: 0 errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add TheKameleon.Superpowers.Vsix/SuperpowersToolWindowControl.xaml
@@ -619,12 +619,12 @@ git commit -m "feat: make the model preference field an editable dropdown of fet
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Build the full solution**
+- [x] **Step 1: Build the full solution**
 
 Run: `dotnet build TheKameleon.Superpowers.slnx -c Debug`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run both full test suites**
+- [x] **Step 2: Run both full test suites**
 
 Run: `./TheKameleon.Superpowers.Tests/bin/Debug/net8.0/TheKameleon.Superpowers.Tests.exe`
 Expected: PASS, 0 failures.
@@ -642,4 +642,4 @@ Launch the experimental instance (F5), open the Superpowers tool window, and ver
 5. Add a second, fresh row, set **Your Copilot plan** to something other than Unspecified first, then pick a Function — confirm the suggested model (if the catalog has plan-availability data for that tier) prefers one available on the selected plan over one that isn't, when both exist in the catalog.
 6. Save preferences, reopen the tool window — confirm rows still load with their saved (not re-suggested) Family/Model values, unaffected by this change.
 
-- [ ] **Step 4: No commit for this task** — verification only. If Step 2's integration suite requires a fix, that becomes its own small follow-up commit outside this plan's numbered tasks, exactly as the prior plan's Task 9 handled its own integration-test surprise.
+- [x] **Step 4: No commit for this task** — verification only. If Step 2's integration suite requires a fix, that becomes its own small follow-up commit outside this plan's numbered tasks, exactly as the prior plan's Task 9 handled its own integration-test surprise.
