@@ -30,7 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TheKameleon.Superpowers.Skills\TheKameleon.Superpowers.Skills.csproj" />
     <ProjectReference Include="..\TheKameleon.Superpowers.Vsix\TheKameleon.Superpowers.Vsix.csproj" ReferenceOutputAssembly="false" />
-    <None Include="..\TheKameleon.Superpowers.Vsix\bin\$(Configuration)\net8.0-windows8.0\TheKameleon.Superpowers.Vsix.vsix" Link="TheKameleon.Superpowers.Vsix.vsix" CopyToOutputDirectory="Always" />
+    <None Include="..\TheKameleon.Superpowers.Vsix\bin\$(Configuration)\net8.0-windows8.0\TheKameleon.Superpowers.vsix" Link="TheKameleon.Superpowers.vsix" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>

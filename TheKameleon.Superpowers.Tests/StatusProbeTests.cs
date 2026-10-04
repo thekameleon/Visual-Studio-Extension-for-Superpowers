@@ -60,25 +60,16 @@ public sealed class StatusProbeTests : IDisposable
     }
 
     [Fact]
-    public void MissingFunctionAgentFileWarnsButHealthyInstallHasNone()
+    public void SubagentModelPreferencesDoNotCreatePerFunctionAgents()
     {
-        Install();
-
-        Assert.DoesNotContain(Run(), check => check.Title == "Per-function agents");
-
         new SuperpowersSetup(profile.Paths).Install(
             new InstalledRelease("v1.0.0", "abc", "bundled"),
             new SkillArchiveReadResult(new[] { TestSupport.Skill("alpha") }, Array.Empty<string>()),
             overwriteEdited: false,
-            new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "gpt-5") } });
+            new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, new[] { "gpt-5" }) } });
 
         Assert.DoesNotContain(Run(), check => check.Title == "Per-function agents");
-
-        File.Delete(Path.Combine(profile.Paths.AgentsRoot, "superpowers-review.agent.md"));
-
-        var check = Assert.Single(Run(), check => check.Title == "Per-function agents");
-        Assert.Equal(StatusLevel.Warning, check.Level);
-        Assert.Contains("Review", check.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(profile.Paths.AgentsRoot, "superpowers-review.agent.md")));
     }
 
     [Fact]

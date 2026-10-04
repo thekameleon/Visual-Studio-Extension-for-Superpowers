@@ -98,19 +98,40 @@ public sealed class AgentFileWriterTests : IDisposable
     }
 
     [Fact]
-    public void BuildContentOmitsModelFieldWhenNull()
+    public void BuildContentNeverWritesAModelField()
     {
-        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, model: null);
+        var preferences = new ModelPreferences { Preferences = new[] { new ModelPreference(SuperpowersFunction.General, new[] { "Claude Opus 5.5" }) } };
+
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, preferences);
 
         Assert.DoesNotContain("model:", content);
     }
 
     [Fact]
-    public void BuildContentIncludesModelFieldWhenProvided()
+    public void BuildContentOmitsSubagentModelListWhenNoneAreSet()
     {
-        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, model: "Claude Opus 5.5");
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General);
 
-        Assert.Contains("model: Claude Opus 5.5", content);
+        Assert.DoesNotContain("Suggested sub-agent models", content);
+    }
+
+    [Fact]
+    public void BuildContentListsSubagentModelsPerStep()
+    {
+        var preferences = new ModelPreferences
+        {
+            Preferences = new[]
+            {
+                new ModelPreference(SuperpowersFunction.Review, new[] { "Claude Opus 5.5", "GPT-5.4" }),
+                new ModelPreference(SuperpowersFunction.General, new[] { "GPT-5 mini" }),
+            },
+        };
+
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, preferences);
+
+        Assert.Contains("Suggested sub-agent models", content);
+        Assert.Contains("- Review: `Claude Opus 5.5`, `GPT-5.4`", content);
+        Assert.Contains("- Any other step: `GPT-5 mini`", content);
     }
 
     [Fact]
@@ -122,17 +143,6 @@ public sealed class AgentFileWriterTests : IDisposable
         Assert.Contains("name: Superpowers (Review)", review);
         Assert.NotEqual(general, review);
         Assert.DoesNotContain("name: Superpowers\n", review);
-    }
-
-    [Fact]
-    public void WriteFunctionAgentCreatesANamedFileForNonGeneralFunctions()
-    {
-        var outcome = Writer.WriteFunctionAgent(SuperpowersFunction.Review, "GPT-5.4", recorded: null, overwriteEdited: false);
-
-        Assert.Equal(AgentFileStatus.Written, outcome.Status);
-        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
-        Assert.True(File.Exists(path));
-        Assert.Contains("model: GPT-5.4", File.ReadAllText(path));
     }
 
     public void Dispose() => profile.Dispose();

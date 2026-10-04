@@ -131,8 +131,7 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Succeeded, Array.Empty<string>(), load.State);
         }
 
-        var generalModel = modelPreferences?.Preferences.FirstOrDefault(p => p.Function == SuperpowersFunction.General)?.Model;
-        var outcome = agent.Write(load.State.AgentFile, overwriteEdited: false, generalModel);
+        var outcome = agent.Write(load.State.AgentFile, overwriteEdited: false, modelPreferences);
         if (outcome.Status == AgentFileStatus.EditedKept)
         {
             return new SetupResult(SetupStatus.Partial, new[] { "A newer Superpowers agent is available, but your edited superpowers.agent.md was kept. Use Install to replace it." }, load.State);
@@ -154,35 +153,16 @@ public sealed class SuperpowersSetup(ProfilePaths paths)
             return new SetupResult(SetupStatus.Failed, messages, seed);
         }
 
-        var generalModel = modelPreferences.Preferences.FirstOrDefault(p => p.Function == SuperpowersFunction.General)?.Model;
-        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited && seed.AgentFile is not null, generalModel);
+        var agentOutcome = agent.Write(seed.AgentFile, overwriteEdited && seed.AgentFile is not null, modelPreferences);
         if (agentOutcome.Status == AgentFileStatus.EditedKept)
         {
             messages.Add("Your edited superpowers.agent.md was kept.");
         }
 
-        var knownFunctionFiles = seed.FunctionAgentFiles.ToDictionary(f => f.Function, StringComparer.Ordinal);
+        // Model preferences now apply only to Copilot CLI sub-agents, so per-step agent files from
+        // earlier versions are no longer written; unedited ones are removed.
         var functionAgentFiles = new List<InstalledFunctionAgentFile>();
-        var desiredFunctions = modelPreferences.Preferences
-            .Where(p => p.Function != SuperpowersFunction.General)
-            .Select(p => p.Function)
-            .ToHashSet();
-        foreach (var preference in modelPreferences.Preferences.Where(p => p.Function != SuperpowersFunction.General))
-        {
-            knownFunctionFiles.TryGetValue(preference.Function.ToString(), out var recorded);
-            var functionOutcome = agent.WriteFunctionAgent(preference.Function, preference.Model, recorded, overwriteEdited);
-            if (functionOutcome.Status == AgentFileStatus.EditedKept)
-            {
-                messages.Add($"Your edited superpowers-{preference.Function.ToString().ToLowerInvariant()}.agent.md was kept.");
-            }
-
-            if (functionOutcome.Agent is not null)
-            {
-                functionAgentFiles.Add(functionOutcome.Agent);
-            }
-        }
-
-        foreach (var orphan in seed.FunctionAgentFiles.Where(f => !desiredFunctions.Contains(Enum.Parse<SuperpowersFunction>(f.Function))))
+        foreach (var orphan in seed.FunctionAgentFiles)
         {
             var removeOutcome = agent.RemoveFunctionAgent(Enum.Parse<SuperpowersFunction>(orphan.Function), orphan);
             if (removeOutcome.Status == AgentFileStatus.EditedNotRemoved)

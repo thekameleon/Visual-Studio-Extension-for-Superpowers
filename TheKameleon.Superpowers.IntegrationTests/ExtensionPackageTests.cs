@@ -6,7 +6,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
 {
     public class ExtensionPackageTests
     {
-        private const string PackageName = "TheKameleon.Superpowers.Vsix.vsix";
+        private const string PackageName = "TheKameleon.Superpowers.vsix";
         private const string AssemblyName = "TheKameleon.Superpowers.Vsix.dll";
         private static readonly XNamespace ManifestNamespace = "http://schemas.microsoft.com/developer/vsx-schema/2011";
 

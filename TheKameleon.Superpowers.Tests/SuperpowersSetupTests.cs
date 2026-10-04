@@ -123,82 +123,70 @@ public sealed class SuperpowersSetupTests : IDisposable
     }
 
     [Fact]
-    public void RefreshAgentWithNoPreferencesDoesNotAddAModelLine()
+    public void RefreshAgentNeverAddsAModelLine()
     {
         Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
 
-        var result = Setup.RefreshAgent();
+        var result = Setup.RefreshAgent(Preferences((SuperpowersFunction.General, new[] { "Claude Opus 5.5" })));
 
         Assert.Equal(SetupStatus.Succeeded, result.Status);
         Assert.DoesNotContain("model:", File.ReadAllText(profile.Paths.AgentFile));
     }
 
     [Fact]
-    public void RefreshAgentWithoutAGeneralPreferenceDoesNotAddAModelLine()
+    public void RefreshAgentWritesSubagentModelSuggestions()
     {
-        var preferences = new ModelPreferences
-        {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
-        };
-        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
 
-        var result = Setup.RefreshAgent(preferences);
+        var result = Setup.RefreshAgent(Preferences((SuperpowersFunction.Review, new[] { "GPT-5.4", "Claude Opus 5.5" })));
 
         Assert.Equal(SetupStatus.Succeeded, result.Status);
-        Assert.DoesNotContain("model:", File.ReadAllText(profile.Paths.AgentFile));
+        Assert.Contains("- Review: `GPT-5.4`, `Claude Opus 5.5`", File.ReadAllText(profile.Paths.AgentFile));
     }
 
     [Fact]
-    public void RefreshAgentPreservesTheGeneralModelPreference()
+    public void InstallRemovesLegacyFunctionAgentFile()
     {
-        var preferences = new ModelPreferences
-        {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.General, "Claude Opus 5.5") },
-        };
-        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, preferences);
-        Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(profile.Paths.AgentFile));
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
+        var path = WriteLegacyFunctionAgent(edited: false);
 
-        var result = Setup.RefreshAgent(preferences);
-
-        Assert.Equal(SetupStatus.Succeeded, result.Status);
-        Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(profile.Paths.AgentFile));
-    }
-
-    [Fact]
-    public void InstallRemovesOrphanedFunctionAgentFileWhenPreferenceIsDropped()
-    {
-        var withReview = new ModelPreferences
-        {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
-        };
-        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
-        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
-        Assert.True(File.Exists(path));
-
-        var withoutReview = ModelPreferences.Empty;
-        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withoutReview);
+        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, Preferences((SuperpowersFunction.Review, new[] { "GPT-5.4" })));
 
         Assert.False(File.Exists(path));
         Assert.Empty(result.State.FunctionAgentFiles);
     }
 
     [Fact]
-    public void InstallKeepsOrphanedFunctionAgentFileInStateWhenEdited()
+    public void InstallKeepsEditedLegacyFunctionAgentFile()
     {
-        var withReview = new ModelPreferences
-        {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "GPT-5.4") },
-        };
-        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withReview);
-        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
-        File.AppendAllText(path, "my edit");
+        Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
+        var path = WriteLegacyFunctionAgent(edited: true);
 
-        var withoutReview = ModelPreferences.Empty;
-        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false, withoutReview);
+        var result = Setup.Install(Release, Source(TestSupport.Skill("alpha")), false);
 
         Assert.True(File.Exists(path));
         Assert.Contains("my edit", File.ReadAllText(path));
         Assert.Single(result.State.FunctionAgentFiles);
+    }
+
+    private static ModelPreferences Preferences(params (SuperpowersFunction Function, string[] Models)[] entries) => new()
+    {
+        Preferences = entries.Select(e => new ModelPreference(e.Function, e.Models)).ToArray(),
+    };
+
+    private string WriteLegacyFunctionAgent(bool edited)
+    {
+        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
+        File.WriteAllText(path, "legacy review agent");
+        var store = new InstallStateStore(profile.Paths);
+        var state = store.Load().State;
+        store.Save(state with { FunctionAgentFiles = new[] { new InstalledFunctionAgentFile("Review", ContentHash.OfFile(path), 3) } });
+        if (edited)
+        {
+            File.AppendAllText(path, "my edit");
+        }
+
+        return path;
     }
 
     [Fact]

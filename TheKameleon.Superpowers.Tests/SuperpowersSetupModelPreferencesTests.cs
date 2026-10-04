@@ -8,14 +8,14 @@ namespace TheKameleon.Superpowers.Tests;
 public sealed class SuperpowersSetupModelPreferencesTests
 {
     [Fact]
-    public void InstallWritesAFunctionAgentFileForEachConfiguredPreference()
+    public void InstallWritesSubagentModelsIntoTheMainAgentOnly()
     {
         using var profile = new TempProfile();
         var setup = new SuperpowersSetup(profile.Paths);
         var skill = TestSupport.Skill("brainstorming");
         var preferences = ModelPreferences.Empty with
         {
-            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, "Claude Opus 5.5") },
+            Preferences = new[] { new ModelPreference(SuperpowersFunction.Review, new[] { "Claude Opus 5.5", "GPT-5.4" }) },
         };
 
         var result = setup.Install(
@@ -24,9 +24,10 @@ public sealed class SuperpowersSetupModelPreferencesTests
             overwriteEdited: false,
             preferences);
 
-        Assert.Single(result.State.FunctionAgentFiles);
-        Assert.Equal("Review", result.State.FunctionAgentFiles[0].Function);
-        var path = AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review);
-        Assert.Contains("model: Claude Opus 5.5", File.ReadAllText(path));
+        Assert.Empty(result.State.FunctionAgentFiles);
+        Assert.False(File.Exists(AgentFileWriter.FunctionAgentFilePath(profile.Paths, SuperpowersFunction.Review)));
+        var agent = File.ReadAllText(profile.Paths.AgentFile);
+        Assert.DoesNotContain("model:", agent);
+        Assert.Contains("- Review: `Claude Opus 5.5`, `GPT-5.4`", agent);
     }
 }

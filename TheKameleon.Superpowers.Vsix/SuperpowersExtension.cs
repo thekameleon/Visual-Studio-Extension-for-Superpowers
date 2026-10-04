@@ -6,16 +6,6 @@ namespace TheKameleon.Superpowers.Vsix
     [VisualStudioContribution]
     public sealed class SuperpowersExtension : Extension
     {
-        [VisualStudioContribution]
-        public static MenuConfiguration SuperpowersMenu => new("%Superpowers.Menu.DisplayName%")
-        {
-            Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
-            Children =
-            [
-                MenuChild.Command<OpenSuperpowersCommand>(),
-            ],
-        };
-
         public override ExtensionConfiguration ExtensionConfiguration => new()
         {
             RequiresInProcessHosting = false,

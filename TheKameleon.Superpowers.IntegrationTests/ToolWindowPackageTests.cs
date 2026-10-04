@@ -47,7 +47,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
 
             var command = Assert.Single(commands, command =>
                 command.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand");
-            AssertLocalizedDisplayName(package, command, "Superpowers.OpenCommand.DisplayName", "Open");
+            AssertLocalizedDisplayName(package, command, "Superpowers.Menu.DisplayName", "Superpowers");
             Assert.Equal("None", command.GetProperty("flags").GetString());
         }
 
@@ -58,24 +58,12 @@ namespace TheKameleon.Superpowers.IntegrationTests
             using var stream = OpenRequiredEntry(package, ".vsextension/extension.json");
             using var registration = JsonDocument.Parse(stream);
             var root = registration.RootElement;
-            var menu = Assert.Single(root.GetProperty("controlContainers").EnumerateArray(), container =>
-                container.GetProperty("name").GetString() == "TheKameleon.Superpowers.Vsix.SuperpowersExtension.SuperpowersMenu");
-            Assert.Equal("Menu", menu.GetProperty("type").GetString());
-            AssertLocalizedDisplayName(package, menu, "Superpowers.Menu.DisplayName", "Superpowers");
-
             var placements = root.GetProperty("controlPlacements").EnumerateArray().ToArray();
-            var menuPlacement = Assert.Single(placements, placement =>
-                placement.GetProperty("controlName").GetString() == menu.GetProperty("name").GetString());
-            var legacyParent = menuPlacement.GetProperty("parent").GetProperty("legacyParentId");
-            Assert.Equal("d309f791-903f-11d0-9efc-00a0c911004f", legacyParent.GetProperty("guid").GetString());
-            Assert.Equal(24576, legacyParent.GetProperty("id").GetInt32());
-
             var commandPlacement = Assert.Single(placements, placement =>
-                placement.GetProperty("controlName").GetString() == "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand");
-            var groupName = commandPlacement.GetProperty("parent").GetProperty("parentName").GetString();
-            var groupPlacement = Assert.Single(placements, placement =>
-                placement.GetProperty("controlName").GetString() == groupName);
-            Assert.Equal(menu.GetProperty("name").GetString(), groupPlacement.GetProperty("parent").GetProperty("parentName").GetString());
+                placement.GetProperty("controlName").GetString() == "TheKameleon.Superpowers.Vsix.OpenSuperpowersCommand"
+                && placement.GetProperty("parent").TryGetProperty("legacyParentId", out _));
+            var legacyParent = commandPlacement.GetProperty("parent").GetProperty("legacyParentId");
+            Assert.Equal("d309f791-903f-11d0-9efc-00a0c911004f", legacyParent.GetProperty("guid").GetString());
         }
 
         [Fact]
@@ -132,6 +120,14 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.False(string.IsNullOrWhiteSpace((string?)releasePicker.Attribute("AutomationProperties.Name")));
             Assert.Single(view.Descendants(presentation + "ItemsControl"), element => (string?)element.Attribute("ItemsSource") == "{Binding Checks}");
             Assert.Single(view.Descendants(presentation + "ItemsControl"), element => (string?)element.Attribute("ItemsSource") == "{Binding Tips}");
+
+            foreach (var panelName in new[] { "StackPanel", "Grid", "WrapPanel", "DockPanel" })
+            {
+                foreach (var panel in view.Descendants(presentation + panelName))
+                {
+                    Assert.DoesNotContain(panel.Nodes().OfType<XText>(), text => !string.IsNullOrWhiteSpace(text.Value));
+                }
+            }
         }
 
         [Fact]
@@ -207,7 +203,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
 
         private static ZipArchive OpenPackage()
         {
-            return ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, "TheKameleon.Superpowers.Vsix.vsix"));
+            return ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, "TheKameleon.Superpowers.vsix"));
         }
 
         private static Stream OpenRequiredEntry(ZipArchive package, string name)

@@ -5,7 +5,7 @@ namespace TheKameleon.Superpowers.IntegrationTests;
 
 public sealed class BundledCatalogPackageTests
 {
-    private const string PackageName = "TheKameleon.Superpowers.Vsix.vsix";
+    private const string PackageName = "TheKameleon.Superpowers.vsix";
     private const string CatalogRoot = "bundled-catalog/obra.superpowers/2026-09-21";
 
     [Fact]

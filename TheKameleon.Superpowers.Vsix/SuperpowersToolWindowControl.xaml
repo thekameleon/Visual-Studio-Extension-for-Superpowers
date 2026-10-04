@@ -51,6 +51,8 @@
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="Superpowers for GitHub Copilot" FontWeight="SemiBold" FontSize="16" />
                         <TextBlock Text="{Binding Explanation}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
+                        <TextBlock Text="Copilot Chat limitations and sub-agents" FontWeight="SemiBold" Margin="0,10,0,0" />
+                        <TextBlock Text="{Binding Limitations}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
 
@@ -167,8 +169,8 @@
 
                 <Border Style="{StaticResource Card}" Margin="0">
                     <StackPanel>
-                        <TextBlock Text="Model preferences" Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="Optional. Sets which Copilot model each Superpowers function's agent should use. This is advisory only &#x2014; the extension cannot verify which models are actually enabled on your plan." Style="{StaticResource Hint}" Margin="0,2,0,4" />
+                        <TextBlock Text="Sub-agent models" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Optional. Copilot Chat keeps the model you selected in Chat. These suggestions apply only to Copilot CLI sub-agents: for each step, Copilot Chat passes one of your suggested models with --model. With no suggestions for a step it uses the &#x201C;Any other step&#x201D; row, or chooses itself. Advisory only &#x2014; the extension cannot verify which models are enabled on your plan." Style="{StaticResource Hint}" Margin="0,2,0,4" />
                         <TextBlock Text="{Binding ModelCatalogStatusText}" Style="{StaticResource Hint}" FontStyle="Italic" Margin="0,0,0,10" />
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <TextBlock Text="Your Copilot plan" Style="{StaticResource FieldLabel}" />
@@ -178,35 +180,54 @@
                         <Grid Margin="0,0,0,4" Opacity="0.75">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Function" />
-                            <TextBlock Grid.Column="1" Text="Provider" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="2" Text="Model" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="0" Text="Step" />
+                            <TextBlock Grid.Column="1" Text="Suggested models" Margin="8,0,0,0" />
                         </Grid>
                         <ItemsControl ItemsSource="{Binding FunctionRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,4">
+                                    <Border BorderThickness="1" CornerRadius="4" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBorderBrushKey}}">
+                                    <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="150" />
-                                            <ColumnDefinition Width="100" />
-                                            <ColumnDefinition Width="220" />
+                                            <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <ComboBox Grid.Column="0" ItemsSource="{Binding DataContext.FunctionOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}" SelectedItem="{Binding Function, Mode=TwoWay}" AutomationProperties.Name="Superpowers function" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Provider}" Margin="8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="Model provider" />
-                                        <ComboBox Grid.Column="2" IsEditable="True" Text="{Binding Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.ModelNameOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Margin="8,0,6,0" AutomationProperties.Name="Model name" />
-                                        <Button Grid.Column="3" Command="{Binding DataContext.RemovePreferenceRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Content="Remove" MinWidth="0" Margin="0" AutomationProperties.Name="Remove this model preference row" />
+                                        <ComboBox Grid.Column="0" VerticalAlignment="Top" ItemsSource="{Binding DataContext.FunctionOptions, RelativeSource={RelativeSource AncestorType=ItemsControl}}" SelectedItem="{Binding Function, Mode=TwoWay}" AutomationProperties.Name="Superpowers step" />
+                                        <StackPanel Grid.Column="1" Margin="8,0,6,0">
+                                            <ItemsControl ItemsSource="{Binding Models}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border BorderThickness="1" BorderBrush="{DynamicResource {x:Static colors:EnvironmentColors.ToolWindowBorderBrushKey}}" Padding="6,1,1,1" Margin="0,0,4,4">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                                                <Button Content="&#x2715;" MinWidth="0" Padding="4,0" Margin="4,0,0,0" Command="{Binding DataContext.RemoveModelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" AutomationProperties.Name="Remove this suggested model" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Command="{Binding AddModelCommand}" Content="Add model..." MinWidth="0" Margin="0" AutomationProperties.Name="Open a dialog to add a model to the step's suggestions" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" VerticalAlignment="Top" Command="{Binding DataContext.RemovePreferenceRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" Content="Remove step" MinWidth="0" Margin="0" AutomationProperties.Name="Remove this step's model suggestions" />
                                     </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                            <Button Command="{Binding AddPreferenceRowCommand}" Content="Add row" AutomationProperties.Name="Add a model preference row" />
-                            <Button Command="{Binding SaveModelPreferencesCommand}" Content="Save model preferences" FontWeight="SemiBold" AutomationProperties.Name="Save model preferences" />
+                            <Button Command="{Binding AddPreferenceRowCommand}" Content="Add step" AutomationProperties.Name="Add a step with sub-agent model suggestions" />
+                            <Button Command="{Binding SaveModelPreferencesCommand}" Content="Save sub-agent models" FontWeight="SemiBold" AutomationProperties.Name="Save sub-agent model suggestions" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

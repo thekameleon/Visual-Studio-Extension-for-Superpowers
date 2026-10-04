@@ -8,9 +8,17 @@ namespace TheKameleon.Superpowers.Vsix
     [VisualStudioContribution]
     public sealed class OpenSuperpowersCommand : Command
     {
-        public override CommandConfiguration CommandConfiguration => new("%Superpowers.OpenCommand.DisplayName%")
+        [VisualStudioContribution]
+        public static ToolbarConfiguration SuperpowersToolbar => new("%Superpowers.Toolbar.DisplayName%")
         {
+            Children = [ToolbarChild.Command<OpenSuperpowersCommand>()],
+        };
+
+        public override CommandConfiguration CommandConfiguration => new("%Superpowers.Menu.DisplayName%")
+        {
+            Placements = [CommandPlacement.KnownPlacements.ExtensionsMenu],
             Icon = new(ImageMoniker.Custom("Superpowers"), IconSettings.IconAndText),
+            TooltipText = "%Superpowers.Menu.Tooltip%",
         };
 
         public override async Task ExecuteCommandAsync(IClientContext context, CancellationToken cancellationToken)

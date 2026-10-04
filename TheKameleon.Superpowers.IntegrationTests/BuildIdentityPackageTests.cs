@@ -20,7 +20,7 @@ public sealed class BuildIdentityPackageTests
 
     private static (string PackageVersion, string FileVersion, string InformationalVersion, Version AssemblyVersion) ReadIdentity(string name)
     {
-        using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, name + ".vsix"));
+        using var package = ZipFile.OpenRead(Path.Combine(AppContext.BaseDirectory, "TheKameleon.Superpowers.vsix"));
         using var manifestStream = package.GetEntry("extension.vsixmanifest")!.Open();
         var manifest = XDocument.Load(manifestStream);
         XNamespace ns = "http://schemas.microsoft.com/developer/vsx-schema/2011";

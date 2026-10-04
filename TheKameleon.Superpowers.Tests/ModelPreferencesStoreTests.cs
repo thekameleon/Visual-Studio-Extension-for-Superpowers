@@ -26,8 +26,8 @@ public sealed class ModelPreferencesStoreTests
             Plan = CopilotPlan.Business,
             Preferences = new[]
             {
-                new ModelPreference(SuperpowersFunction.Review, "Claude Opus 5.5"),
-                new ModelPreference(SuperpowersFunction.Debug, "GPT-5.4"),
+                new ModelPreference(SuperpowersFunction.Review, new[] { "Claude Opus 5.5", "GPT-5.4" }),
+                new ModelPreference(SuperpowersFunction.Debug, new[] { "GPT-5.4" }),
             },
         };
 
@@ -36,11 +36,11 @@ public sealed class ModelPreferencesStoreTests
 
         Assert.Equal(CopilotPlan.Business, loaded.Plan);
         Assert.Equal(2, loaded.Preferences.Count);
-        Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Model == "Claude Opus 5.5");
+        Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Models.SequenceEqual(new[] { "Claude Opus 5.5", "GPT-5.4" }));
     }
 
     [Fact]
-    public void LoadIgnoresALeftoverFamilyPropertyFromAnOlderFileFormat()
+    public void LoadMigratesASingleModelVersion1File()
     {
         using var profile = new TempProfile();
         var store = new ModelPreferencesStore(profile.Paths);
@@ -58,7 +58,7 @@ public sealed class ModelPreferencesStoreTests
         var loaded = store.Load();
 
         Assert.Equal(CopilotPlan.Business, loaded.Plan);
-        Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Model == "Claude Opus 5.5");
+        Assert.Contains(loaded.Preferences, p => p.Function == SuperpowersFunction.Review && p.Models.SequenceEqual(new[] { "Claude Opus 5.5" }));
     }
 
     [Fact]

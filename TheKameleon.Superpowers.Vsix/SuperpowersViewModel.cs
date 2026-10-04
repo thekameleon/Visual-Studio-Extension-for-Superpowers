@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Extensibility;
 using Microsoft.VisualStudio.Extensibility.Shell;
+using Microsoft.VisualStudio.RpcContracts.Notifications;
 using Microsoft.VisualStudio.Extensibility.UI;
 using TheKameleon.Superpowers.Core.Contracts.Catalog;
 using TheKameleon.Superpowers.Core.Contracts.Settings;
@@ -28,7 +29,7 @@ namespace TheKameleon.Superpowers.Vsix
         private readonly Func<SuperpowersFunction, ModelPreferenceRow, bool>? isFunctionAvailable;
         private readonly Action<SuperpowersFunction>? reportFunctionConflict;
         private SuperpowersFunction function;
-        private string model = string.Empty;
+        private string newModel = string.Empty;
         private string? lastSuggestion;
 
         public ModelPreferenceRow(
@@ -36,15 +37,49 @@ namespace TheKameleon.Superpowers.Vsix
             Func<SuperpowersFunction, string?>? suggestModel = null,
             Func<string, string?>? lookupProvider = null,
             Func<SuperpowersFunction, ModelPreferenceRow, bool>? isFunctionAvailable = null,
-            Action<SuperpowersFunction>? reportFunctionConflict = null)
+            Action<SuperpowersFunction>? reportFunctionConflict = null,
+            IEnumerable<string>? models = null,
+            Func<ModelPreferenceRow, CancellationToken, Task<string?>>? pickModel = null)
         {
             this.suggestModel = suggestModel;
             this.lookupProvider = lookupProvider;
             this.isFunctionAvailable = isFunctionAvailable;
             this.reportFunctionConflict = reportFunctionConflict;
             this.function = function;
-            this.model = suggestModel?.Invoke(function) ?? string.Empty;
-            this.lastSuggestion = string.IsNullOrEmpty(this.model) ? null : this.model;
+            if (models is not null)
+            {
+                this.Models.AddRange(models.Select(this.Describe));
+            }
+            else
+            {
+                var suggestion = suggestModel?.Invoke(function);
+                if (!string.IsNullOrWhiteSpace(suggestion))
+                {
+                    this.Models.Add(this.Describe(suggestion));
+                    this.lastSuggestion = suggestion;
+                }
+            }
+
+            this.AddModelCommand = new AsyncCommand(async (parameter, context, cancellationToken) =>
+            {
+                if (pickModel is null)
+                {
+                    this.AddModel(this.NewModel);
+                    this.NewModel = string.Empty;
+                    return;
+                }
+
+                this.AddModel(await pickModel(this, cancellationToken).ConfigureAwait(false));
+            });
+            this.RemoveModelCommand = new AsyncCommand((parameter, context, cancellationToken) =>
+            {
+                if (parameter is SuggestedModel model)
+                {
+                    this.Models.Remove(model);
+                }
+
+                return Task.CompletedTask;
+            });
         }
 
         [DataMember]
@@ -73,39 +108,76 @@ namespace TheKameleon.Superpowers.Vsix
                 this.function = value;
                 this.RaiseNotifyPropertyChangedEvent(nameof(this.Function));
                 this.RaiseNotifyPropertyChangedEvent(nameof(this.FunctionLabel));
-                if (string.IsNullOrWhiteSpace(this.model) || this.model == this.lastSuggestion)
+                var onlySuggestion = this.Models.Count == 0
+                    || (this.Models.Count == 1 && this.Models[0].Name == this.lastSuggestion);
+                if (onlySuggestion)
                 {
                     var suggestion = this.suggestModel?.Invoke(value);
-                    this.Model = suggestion ?? this.model;
-                    this.lastSuggestion = string.IsNullOrEmpty(suggestion) ? null : suggestion;
+                    if (!string.IsNullOrWhiteSpace(suggestion))
+                    {
+                        this.Models.Clear();
+                        this.Models.Add(this.Describe(suggestion));
+                    }
+
+                    this.lastSuggestion = string.IsNullOrEmpty(suggestion) ? this.lastSuggestion : suggestion;
                 }
             }
         }
 
         [DataMember]
-        public string FunctionLabel => this.Function.ToString();
+        public string FunctionLabel => this.Function == SuperpowersFunction.General ? "Any other step" : this.Function.ToString();
+
+        /// <summary>Models suggested to Copilot Chat for sub-agents dispatched during this step.</summary>
+        [DataMember]
+        public ObservableList<SuggestedModel> Models { get; } = new();
 
         [DataMember]
-        public string Model
+        public string NewModel
         {
-            get => this.model;
-            set
-            {
-                if (this.SetProperty(ref this.model, value))
-                {
-                    this.RaiseNotifyPropertyChangedEvent(nameof(this.Provider));
-                }
-            }
+            get => this.newModel;
+            set => this.SetProperty(ref this.newModel, value);
         }
 
-        /// <summary>Derived, never stored: looked up from the fetched catalog by the current
-        /// Model name. Empty when Model is blank or doesn't match anything in the catalog
-        /// (including when the catalog hasn't been fetched yet, or the user typed a model name
-        /// the catalog doesn't know about).</summary>
         [DataMember]
-        public string Provider => string.IsNullOrWhiteSpace(this.model)
-            ? string.Empty
-            : this.lookupProvider?.Invoke(this.model) ?? string.Empty;
+        public IAsyncCommand AddModelCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand RemoveModelCommand { get; }
+
+        public IReadOnlyList<string> ModelNames => this.Models.Select(model => model.Name).ToArray();
+
+        public void AddModel(string? name)
+        {
+            var trimmed = name?.Trim();
+            if (string.IsNullOrEmpty(trimmed) || this.Models.Any(model => string.Equals(model.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            this.Models.Add(this.Describe(trimmed));
+        }
+
+        private SuggestedModel Describe(string name) => new(name.Trim(), this.lookupProvider?.Invoke(name.Trim()) ?? string.Empty);
+    }
+
+    [DataContract]
+    internal sealed class SuggestedModel
+    {
+        public SuggestedModel(string name, string provider)
+        {
+            this.Name = name;
+            this.Provider = provider;
+        }
+
+        [DataMember]
+        public string Name { get; }
+
+        /// <summary>Looked up from the fetched catalog; empty when the catalog doesn't know the model.</summary>
+        [DataMember]
+        public string Provider { get; }
+
+        [DataMember]
+        public string Label => string.IsNullOrEmpty(this.Provider) ? this.Name : $"{this.Name} ({this.Provider})";
     }
 
     [DataContract]
@@ -171,7 +243,7 @@ namespace TheKameleon.Superpowers.Vsix
                     return Task.CompletedTask;
                 }
 
-                this.FunctionRows.Add(new ModelPreferenceRow(nextFunction.Value, this.SuggestModel, this.LookupProvider, this.IsFunctionAvailable, this.ReportFunctionConflict));
+                this.FunctionRows.Add(new ModelPreferenceRow(nextFunction.Value, this.SuggestModel, this.LookupProvider, this.IsFunctionAvailable, this.ReportFunctionConflict, pickModel: this.PickModelAsync));
                 return Task.CompletedTask;
             });
             this.RemovePreferenceRowCommand = new AsyncCommand((parameter, context, cancellationToken) => { if (parameter is ModelPreferenceRow row) { this.FunctionRows.Remove(row); } return Task.CompletedTask; });
@@ -192,7 +264,11 @@ namespace TheKameleon.Superpowers.Vsix
 
         [DataMember]
         public string Explanation { get; } =
-            "Install copies the upstream Superpowers skills into %USERPROFILE%\\.copilot\\skills and adds a Superpowers agent at %USERPROFILE%\\.github\\agents\\superpowers.agent.md. Nothing else is changed unless you turn on always-on.";
+            "Superpowers (github.com/obra/superpowers) is a set of skills that give a coding agent a disciplined workflow: brainstorm, write a plan, execute it with test-driven development, debug systematically, request review and verify before finishing. This extension installs those skills, unchanged, where GitHub Copilot Chat finds them natively, adds a Superpowers agent and keeps them up to date. Copilot Chat then does the work with its own tools; nothing else is changed unless you turn on always-on.";
+
+        [DataMember]
+        public string Limitations { get; } =
+            "Copilot Chat in Visual Studio has no Task tool, so it cannot start the independent sub-agents that several Superpowers skills rely on (parallel work, fresh-context implementers and independent reviewers), and a chat uses one model throughout. To mimic sub-agents, the Superpowers agent runs the GitHub Copilot CLI from the terminal (copilot -p \"<task>\") as a separate agent with its own context, optionally with a different model per step, then checks its work itself. Your chat keeps the model you selected. Without the CLI, Copilot does the work sequentially in the chat and says when a review was not independent.";
 
         [DataMember]
         public ObservableList<string> ReleaseVersions { get; } = new();
@@ -458,8 +534,9 @@ namespace TheKameleon.Superpowers.Vsix
                 p.Function,
                 lookupProvider: this.LookupProvider,
                 isFunctionAvailable: this.IsFunctionAvailable,
-                reportFunctionConflict: this.ReportFunctionConflict)
-            { Model = p.Model }));
+                reportFunctionConflict: this.ReportFunctionConflict,
+                models: p.Models,
+                pickModel: this.PickModelAsync)));
         }
 
         private async Task InstallAsync(CancellationToken cancellationToken)
@@ -541,7 +618,7 @@ namespace TheKameleon.Superpowers.Vsix
             if (enable)
             {
                 var confirmed = await this.extensibility.Shell().ShowPromptAsync(
-                    "Always-on adds a marked Superpowers block to %USERPROFILE%\\copilot-instructions.md, so every Agent-mode chat uses Superpowers. Your other content in that file is kept. Continue?",
+                    "Always-on adds a marked Superpowers block to the copilot-instructions.md file, so every Agent-mode chat uses Superpowers. Your other content in that file is kept. Continue?",
                     PromptOptions.OKCancel,
                     cancellationToken).ConfigureAwait(false);
                 if (!confirmed)
@@ -782,6 +859,19 @@ namespace TheKameleon.Superpowers.Vsix
             }
         }
 
+        private async Task<string?> PickModelAsync(ModelPreferenceRow row, CancellationToken cancellationToken)
+        {
+            var existing = row.ModelNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var dialogViewModel = new AddModelDialogViewModel(row.FunctionLabel, this.ModelNameOptions.Where(name => !existing.Contains(name)));
+            using var dialog = new AddModelDialogControl(dialogViewModel);
+            var result = await this.extensibility.Shell().ShowDialogAsync(
+                dialog,
+                "Add sub-agent model",
+                new DialogOption(DialogButton.OKCancel, DialogResult.OK),
+                cancellationToken).ConfigureAwait(false);
+            return result == DialogResult.OK ? dialogViewModel.SelectedModel : null;
+        }
+
         private string? SuggestModel(SuperpowersFunction function) =>
             SuperpowersFunctionModelSuggestion.Suggest(this.modelCatalog, function, this.SelectedPlan);
 
@@ -792,7 +882,7 @@ namespace TheKameleon.Superpowers.Vsix
             !this.FunctionRows.Any(other => !ReferenceEquals(other, row) && other.Function == function);
 
         private void ReportFunctionConflict(SuperpowersFunction function) =>
-            this.StatusText = $"{function} already has a model preference row. Remove or change that row first.";
+            this.StatusText = $"{function} already has a sub-agent model row. Remove or change that row first.";
 
         private SuperpowersFunction? NextAvailableFunction()
         {
@@ -811,9 +901,14 @@ namespace TheKameleon.Superpowers.Vsix
         private Task SaveModelPreferencesAsync(CancellationToken cancellationToken)
         {
             var deduped = new Dictionary<SuperpowersFunction, ModelPreference>();
-            foreach (var row in this.FunctionRows.Where(row => !string.IsNullOrWhiteSpace(row.Model)))
+            foreach (var row in this.FunctionRows)
             {
-                deduped[row.Function] = new ModelPreference(row.Function, row.Model.Trim());
+                row.AddModel(row.NewModel);
+                row.NewModel = string.Empty;
+                if (row.Models.Count > 0)
+                {
+                    deduped[row.Function] = new ModelPreference(row.Function, row.ModelNames);
+                }
             }
 
             var preferences = new ModelPreferences
@@ -822,7 +917,7 @@ namespace TheKameleon.Superpowers.Vsix
                 Preferences = deduped.Values.ToArray(),
             };
             this.modelPreferencesStore.Save(preferences);
-            this.StatusText = "Model preferences saved. Select Install or Repair to apply them.";
+            this.StatusText = "Sub-agent model suggestions saved. Select Install or Repair to apply them.";
             return Task.CompletedTask;
         }
 

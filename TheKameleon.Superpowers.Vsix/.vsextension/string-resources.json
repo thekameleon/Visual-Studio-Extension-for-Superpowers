@@ -1,4 +1,6 @@
 {
   "Superpowers.OpenCommand.DisplayName": "Open",
-  "Superpowers.Menu.DisplayName": "Superpowers"
+  "Superpowers.Menu.DisplayName": "Superpowers",
+  "Superpowers.Toolbar.DisplayName": "Superpowers",
+  "Superpowers.Menu.Tooltip": "Open Superpowers"
 }

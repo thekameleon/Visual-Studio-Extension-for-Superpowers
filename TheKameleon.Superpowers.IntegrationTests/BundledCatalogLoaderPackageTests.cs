@@ -7,7 +7,7 @@ public sealed class BundledCatalogLoaderPackageTests
     [Fact]
     public void LoaderReadsBundledCatalogFromVsixPackage()
     {
-        var packagePath = Path.Combine(AppContext.BaseDirectory, "TheKameleon.Superpowers.Vsix.vsix");
+        var packagePath = Path.Combine(AppContext.BaseDirectory, "TheKameleon.Superpowers.vsix");
 
         var result = BundledCatalogLoader.LoadFromPackage(packagePath, "bundled-catalog/obra.superpowers/2026-09-21");
 
