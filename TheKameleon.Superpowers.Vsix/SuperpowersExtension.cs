@@ -10,11 +10,11 @@ namespace TheKameleon.Superpowers.Vsix
         {
             RequiresInProcessHosting = false,
             Metadata = new(
-                id: "TheKameleon.Superpowers.Vsix.8a7fab37-7cfc-4314-ae3c-946698f3ff5d",
+                id: "TheKameleon.Superpowers",
                 version: new System.Version(0, 9, GeneratedBuildVersion.Build, GeneratedBuildVersion.Revision),
                 publisherName: "TheKameleon",
                 displayName: "Superpowers for Visual Studio",
-                description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio 2026.")
+                description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio. This gives Superpowers functionality to Github Copilot Chat for structured AI workflows, reusable skills, project intelligence.")
             {
                 InstallationTargetVersion = "[18.5,)",
                 Icon = "Resources\\icon.png",
