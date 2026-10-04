@@ -85,7 +85,7 @@ public sealed class StatusProbe(ProfilePaths paths)
 
         return new AgentFileWriter(paths).IsEdited(state.AgentFile)
             ? new StatusCheck(title, StatusLevel.Warning, "You have edited superpowers.agent.md; updates will not replace it automatically.")
-            : new StatusCheck(title, StatusLevel.Pass, $"Select Superpowers in the Copilot agent picker (bootstrap version {state.AgentFile.BootstrapVersion}).");
+            : new StatusCheck(title, StatusLevel.Pass, $"The Superpowers agent is installed and available in the Copilot agent picker (bootstrap version {state.AgentFile.BootstrapVersion}).");
     }
 
     private StatusCheck AlwaysOnCheck(InstallState state)

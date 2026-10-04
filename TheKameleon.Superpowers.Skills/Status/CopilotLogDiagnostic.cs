@@ -23,28 +23,36 @@ public static class CopilotLogDiagnostic
     {
         try
         {
-            var newest = Directory.Exists(logDirectory)
-                ? new DirectoryInfo(logDirectory).EnumerateFiles("*.chat.log").OrderByDescending(file => file.LastWriteTimeUtc).FirstOrDefault()
-                : null;
-            if (newest is null)
+            var logs = Directory.Exists(logDirectory)
+                ? new DirectoryInfo(logDirectory).EnumerateFiles("*.chat.log").OrderByDescending(file => file.LastWriteTimeUtc).Take(5).ToList()
+                : new List<FileInfo>();
+            if (logs.Count == 0)
             {
                 return new StatusCheck(Title, StatusLevel.Unknown, "No Copilot chat log was found. Open Copilot Chat, then select Refresh.");
             }
 
             var skillsNeedle = "skill files in: " + paths.SkillsRoot;
             var agentNeedle = "Registered custom agent: " + paths.AgentFile;
-            bool foundSkills = false, foundAgent = false;
-            using var stream = new FileStream(newest.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            using var reader = new StreamReader(stream);
-            while (reader.ReadLine() is { } line && !(foundSkills && foundAgent))
+            foreach (var log in logs)
             {
-                foundSkills |= line.Contains("Found ", StringComparison.Ordinal) && line.Contains(skillsNeedle, StringComparison.OrdinalIgnoreCase);
-                foundAgent |= line.Contains(agentNeedle, StringComparison.OrdinalIgnoreCase);
+                bool foundSkills = false, foundAgent = false;
+                using var stream = new FileStream(log.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                while (reader.ReadLine() is { } line && !(foundSkills && foundAgent))
+                {
+                    foundSkills |= line.Contains("Found ", StringComparison.Ordinal)
+                        && !line.Contains("Found 0 ", StringComparison.Ordinal)
+                        && line.TrimEnd().EndsWith(skillsNeedle, StringComparison.OrdinalIgnoreCase);
+                    foundAgent |= line.Contains(agentNeedle, StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (foundSkills && foundAgent)
+                {
+                    return new StatusCheck(Title, StatusLevel.Pass, "Copilot's log shows it found the skills and the Superpowers agent.");
+                }
             }
 
-            return foundSkills && foundAgent
-                ? new StatusCheck(Title, StatusLevel.Pass, "Copilot's log shows it found the skills and the Superpowers agent.")
-                : new StatusCheck(Title, StatusLevel.Unknown, "Copilot's log does not confirm discovery yet. Start a new chat thread or restart Visual Studio, then select Refresh.");
+            return new StatusCheck(Title, StatusLevel.Unknown, "Copilot's log does not confirm discovery yet. Start a new chat thread or restart Visual Studio, then select Refresh.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

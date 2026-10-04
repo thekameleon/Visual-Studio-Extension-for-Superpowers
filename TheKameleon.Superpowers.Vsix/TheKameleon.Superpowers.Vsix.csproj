@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows8.0</TargetFramework>
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <Version>0.9.2</Version>
+    <AssemblyVersion>0.9.2.0</AssemblyVersion>
     <SuperpowersBuildRole>Owner</SuperpowersBuildRole>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>

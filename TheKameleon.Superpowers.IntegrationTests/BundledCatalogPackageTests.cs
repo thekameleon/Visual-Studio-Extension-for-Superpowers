@@ -73,7 +73,7 @@ public sealed class BundledCatalogPackageTests
         Assert.Contains("MIT License", licenseText, StringComparison.Ordinal);
 
         using var archiveStream = OpenRequiredEntry(package, $"{CatalogRoot}/releases/v6.4.1/source.zip");
-        Assert.True(archiveStream.Length > 0);
+        Assert.NotEqual(-1, archiveStream.ReadByte());
     }
 
     [Fact]

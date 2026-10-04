@@ -136,6 +136,7 @@ namespace TheKameleon.Superpowers.Vsix
         private bool alwaysOn;
         private bool isIdle = true;
         private bool includePrereleases = true;
+        private bool showCopilotCli = true;
 
         public SuperpowersViewModel(VisualStudioExtensibility extensibility)
         {
@@ -147,6 +148,7 @@ namespace TheKameleon.Superpowers.Vsix
             this.modelCatalogCacheStore = new ModelCatalogCacheStore(this.paths);
             this.modelPreferencesStore = new ModelPreferencesStore(this.paths);
             this.modelCatalog = this.modelCatalogCacheStore.Load();
+            this.showCopilotCli = !File.Exists(this.HideCopilotCliMarker);
             this.RefreshModelNameOptions();
             this.modelCatalogStatusText = this.modelCatalog is null
                 ? "Model list not loaded yet. Type a model name manually, or select Refresh model list."
@@ -202,7 +204,7 @@ namespace TheKameleon.Superpowers.Vsix
         public ObservableList<string> Tips { get; } = new()
         {
             "In Copilot Chat, choose Superpowers in the agent picker, or type @Superpowers.",
-            "After installing, start a new chat thread. If Superpowers is not in the agent picker, restart Visual Studio.",
+            "After installing or enabling Superpowers, start a new chat thread. If Superpowers is not in the agent picker, restart Visual Studio.",
             "Turn off Autopilot for brainstorming and planning; those skills ask you questions.",
             "Try: \"I want to add a feature that …\" (brainstorming).",
             "Try: \"This test is failing. Fix it.\" (systematic debugging).",
@@ -230,6 +232,38 @@ namespace TheKameleon.Superpowers.Vsix
             get => this.installedText;
             set => this.SetProperty(ref this.installedText, value);
         }
+
+        [DataMember]
+        public bool ShowCopilotCli
+        {
+            get => this.showCopilotCli;
+            set
+            {
+                if (this.SetProperty(ref this.showCopilotCli, value))
+                {
+                    try
+                    {
+                        if (value)
+                        {
+                            File.Delete(this.HideCopilotCliMarker);
+                        }
+                        else
+                        {
+                            Directory.CreateDirectory(this.paths.StateDirectory);
+                            File.WriteAllText(this.HideCopilotCliMarker, string.Empty);
+                        }
+                    }
+                    catch (IOException)
+                    {
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                    }
+                }
+            }
+        }
+
+        private string HideCopilotCliMarker => Path.Combine(this.paths.StateDirectory, "hide-copilot-cli");
 
         [DataMember]
         public bool AlwaysOn
