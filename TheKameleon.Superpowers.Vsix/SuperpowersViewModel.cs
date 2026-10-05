@@ -200,6 +200,7 @@ namespace TheKameleon.Superpowers.Vsix
         private CopilotModelCatalog? modelCatalog;
         private string modelCatalogStatusText = "Model list not loaded yet.";
         private CopilotPlan selectedPlan = CopilotPlan.Unspecified;
+        private bool showCliWindows = true;
 
         private string? selectedReleaseVersion;
         private string statusText = "Loading Superpowers…";
@@ -251,10 +252,14 @@ namespace TheKameleon.Superpowers.Vsix
             this.InstallCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.InstallCopilotCliAsync, cancellationToken));
             this.SignInCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.SignInCopilotCliAsync, cancellationToken));
             this.VerifyCopilotCliCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.VerifyCopilotCliAsync, cancellationToken));
+            this.InstallPowerShellCommand = new AsyncCommand((parameter, context, cancellationToken) => this.RunAsync(this.InstallPowerShellAsync, cancellationToken));
         }
 
         [DataMember]
         public IAsyncCommand InstallCopilotCliCommand { get; }
+
+        [DataMember]
+        public IAsyncCommand InstallPowerShellCommand { get; }
 
         [DataMember]
         public IAsyncCommand SignInCopilotCliCommand { get; }
@@ -376,6 +381,22 @@ namespace TheKameleon.Superpowers.Vsix
 
         [DataMember]
         public IAsyncCommand ToggleAlwaysOnCommand { get; }
+
+        [DataMember]
+        public bool ShowCliWindows
+        {
+            get => this.showCliWindows;
+            set
+            {
+                if (this.SetProperty(ref this.showCliWindows, value))
+                {
+                    var preferences = this.modelPreferencesStore.Load() with { ShowCliWindows = value };
+                    this.modelPreferencesStore.Save(preferences);
+                    this.setup.RefreshAgent(preferences);
+                    this.StatusText = value ? "Copilot CLI sub-agents will run in visible windows that close when they finish." : "Copilot CLI sub-agents will run in the background.";
+                }
+            }
+        }
 
         [DataMember]
         public bool IncludePrereleases
@@ -529,6 +550,8 @@ namespace TheKameleon.Superpowers.Vsix
             await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
 
             this.SelectedPlan = savedPreferences.Plan;
+            this.showCliWindows = savedPreferences.ShowCliWindows;
+            this.RaiseNotifyPropertyChangedEvent(nameof(this.ShowCliWindows));
             this.FunctionRows.Clear();
             this.FunctionRows.AddRange(savedPreferences.Preferences.Select(p => new ModelPreferenceRow(
                 p.Function,
@@ -641,12 +664,39 @@ namespace TheKameleon.Superpowers.Vsix
             var cliStatus = await Task.Run(this.copilotCli.Detect, cancellationToken).ConfigureAwait(false);
             this.Checks.Add(ToStatusItem(CopilotCliSetup.ToInstalledCheck(cliStatus)));
             this.Checks.Add(ToStatusItem(CopilotCliSetup.ToSignInCheck(cliStatus, this.cliVerification)));
+            var pwshVersion = await Task.Run(this.copilotCli.DetectPowerShellVersion, cancellationToken).ConfigureAwait(false);
+            this.Checks.Add(ToStatusItem(CopilotCliSetup.ToPowerShellCheck(pwshVersion)));
 
             var state = this.setup.LoadState().State;
             this.InstalledText = state.Release is null ? "Not installed." : $"Installed: {state.Release.Tag} ({state.Release.Source}).";
             this.AlwaysOn = state.AlwaysOn.Enabled;
             this.RaiseNotifyPropertyChangedEvent(nameof(this.AlwaysOn));
             this.AlwaysOnButtonText = this.alwaysOn ? "Turn always-on off" : "Turn always-on on";
+        }
+
+        private async Task InstallPowerShellAsync(CancellationToken cancellationToken)
+        {
+            var version = await Task.Run(this.copilotCli.DetectPowerShellVersion, cancellationToken).ConfigureAwait(false);
+            if (CopilotCliSetup.ToPowerShellCheck(version).Level == StatusLevel.Pass)
+            {
+                this.StatusText = $"PowerShell {version} is already installed.";
+                return;
+            }
+
+            var confirmed = await this.extensibility.Shell().ShowPromptAsync(
+                $"Install PowerShell 7 by running:\n\n{CopilotCliSetup.PowerShellInstallCommand}\n\nYou can also download it from {CopilotCliSetup.PowerShellDownloadUrl}\n\nThis installs software outside your Superpowers files. Remove will not uninstall it.",
+                PromptOptions.OKCancel,
+                cancellationToken).ConfigureAwait(false);
+            if (!confirmed)
+            {
+                this.StatusText = "PowerShell 7 installation was not started.";
+                return;
+            }
+
+            this.StatusText = "Installing PowerShell 7 with winget...";
+            var result = await Task.Run(this.copilotCli.InstallPowerShell, cancellationToken).ConfigureAwait(false);
+            this.StatusText = result.Message;
+            await this.RefreshStatusAsync(cancellationToken).ConfigureAwait(false);
         }
 
         private async Task InstallCopilotCliAsync(CancellationToken cancellationToken)
@@ -914,6 +964,7 @@ namespace TheKameleon.Superpowers.Vsix
             var preferences = new ModelPreferences
             {
                 Plan = this.SelectedPlan,
+                ShowCliWindows = this.ShowCliWindows,
                 Preferences = deduped.Values.ToArray(),
             };
             this.modelPreferencesStore.Save(preferences);

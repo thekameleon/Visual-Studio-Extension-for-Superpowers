@@ -3,7 +3,7 @@ namespace TheKameleon.Superpowers.Skills.Bootstrap;
 /// <summary>Adapts upstream Superpowers wording to Visual Studio Copilot. Contains no methodology of its own.</summary>
 public static class BootstrapText
 {
-    public const int Version = 4;
+    public const int Version = 5;
 
     public const string Body = """
         You have Superpowers skills. They are listed in the "Available Skills" section, each with a file path.

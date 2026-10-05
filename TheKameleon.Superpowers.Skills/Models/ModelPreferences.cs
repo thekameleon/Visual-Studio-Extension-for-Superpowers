@@ -27,5 +27,8 @@ public sealed record ModelPreferences
 
     public CopilotPlan Plan { get; init; } = CopilotPlan.Unspecified;
 
+    /// <summary>When true, each Copilot CLI sub-agent runs in its own visible window that closes when the sub-agent finishes.</summary>
+    public bool ShowCliWindows { get; init; } = true;
+
     public IReadOnlyList<ModelPreference> Preferences { get; init; } = Array.Empty<ModelPreference>();
 }

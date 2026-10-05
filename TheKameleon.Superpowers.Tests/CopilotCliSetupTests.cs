@@ -28,6 +28,56 @@ public sealed class CopilotCliSetupTests
     }
 
     [Fact]
+    public void DetectsPowerShell7Version()
+    {
+        var runner = new FakeRunner(new() { [CopilotCliSetup.PowerShellVersionCommand] = new ProcessResult(0, "PowerShell 7.6.6\n", string.Empty) });
+
+        Assert.Equal("7.6.6", new CopilotCliSetup(runner).DetectPowerShellVersion());
+        Assert.Null(new CopilotCliSetup(new FakeRunner(new())).DetectPowerShellVersion());
+    }
+
+    [Fact]
+    public void PowerShellCheckFailsWhenMissingOrTooOld()
+    {
+        Assert.Equal(StatusLevel.Fail, CopilotCliSetup.ToPowerShellCheck(null).Level);
+        Assert.Equal(StatusLevel.Fail, CopilotCliSetup.ToPowerShellCheck("6.2.7").Level);
+        var pass = CopilotCliSetup.ToPowerShellCheck("7.6.6");
+        Assert.Equal(StatusLevel.Pass, pass.Level);
+        Assert.Equal(CopilotCliSetup.PowerShellTitle, pass.Title);
+        Assert.Contains("7.6.6", pass.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstallPowerShellRunsWingetAndReportsResult()
+    {
+        var ok = new FakeRunner(new() { ["winget --version"] = new ProcessResult(0, "v1.9", string.Empty), [CopilotCliSetup.PowerShellInstallCommand] = new ProcessResult(0, string.Empty, string.Empty) });
+        Assert.True(new CopilotCliSetup(ok).InstallPowerShell().Succeeded);
+        Assert.Contains("winget install --id Microsoft.PowerShell", ok.Calls.Last(), StringComparison.Ordinal);
+        var failed = new CopilotCliSetup(new FakeRunner(new())).InstallPowerShell();
+        Assert.False(failed.Succeeded);
+        Assert.Contains(CopilotCliSetup.PowerShellDownloadUrl, failed.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstallPowerShellExplainsWhenWingetIsMissing()
+    {
+        var runner = new FakeRunner(new());
+        var result = new CopilotCliSetup(runner).InstallPowerShell();
+
+        Assert.False(result.Succeeded);
+        Assert.DoesNotContain(CopilotCliSetup.PowerShellInstallCommand, runner.Calls);
+        Assert.Contains("winget (App Installer) was not found", result.Message, StringComparison.Ordinal);
+        Assert.Contains(CopilotCliSetup.PowerShellDownloadUrl, result.Message, StringComparison.Ordinal);
+        Assert.Contains(CopilotCliSetup.WingetDownloadUrl, result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MissingPowerShellCheckIncludesInstallLink()
+    {
+        Assert.Contains(CopilotCliSetup.PowerShellDownloadUrl, CopilotCliSetup.ToPowerShellCheck(null).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReportsMissingCli()
     {
         var status = new CopilotCliSetup(new FakeRunner(new())).Detect();

@@ -17,6 +17,18 @@ public sealed class ModelPreferencesStoreTests
     }
 
     [Fact]
+    public void ShowCliWindowsDefaultsToTrueAndRoundTrips()
+    {
+        using var profile = new TempProfile();
+        var store = new ModelPreferencesStore(profile.Paths);
+
+        Assert.True(store.Load().ShowCliWindows);
+        store.Save(ModelPreferences.Empty with { ShowCliWindows = false });
+
+        Assert.False(store.Load().ShowCliWindows);
+    }
+
+    [Fact]
     public void SaveThenLoadRoundTripsPreferencesAndPlan()
     {
         using var profile = new TempProfile();

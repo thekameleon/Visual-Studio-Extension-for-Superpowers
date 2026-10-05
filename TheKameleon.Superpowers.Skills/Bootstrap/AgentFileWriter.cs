@@ -29,8 +29,20 @@ public sealed class AgentFileWriter(ProfilePaths paths)
         var frontMatter = "---\nname: " + name + "\ndescription: " + description;
         var body = BootstrapText.Body.ReplaceLineEndings("\n") + "\n";
         var guidance = BuildSubagentModelGuidance(modelPreferences);
-        return frontMatter + "\n---\n\n" + body + (guidance.Length == 0 ? string.Empty : "\n" + guidance);
+        var window = BuildCliWindowGuidance(modelPreferences?.ShowCliWindows ?? true).ReplaceLineEndings("\n");
+        return frontMatter + "\n---\n\n" + body + "\n" + window + (guidance.Length == 0 ? string.Empty : "\n" + guidance);
     }
+
+    /// <summary>Tells Copilot whether to run CLI sub-agents in a visible, self-closing window or directly in its terminal.</summary>
+    public static string BuildCliWindowGuidance(bool showCliWindows) => showCliWindows
+        ? """
+            Sub-agent window (set by the user): run each Copilot CLI sub-agent in its own visible window on the taskbar. Write the full task prompt to a new temp file $f and pick a temp output file $o. Then run, on one line: `Start-Process pwsh -Wait -ArgumentList '-NoProfile','-Command',"[Console]::InputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; copilot -p (Get-Content -Raw '$f') --allow-all-tools [--model <name>] 2>&1 | Tee-Object -FilePath '$o'"`. Do not add -NoExit: the window closes by itself when the sub-agent finishes. Then read $o for the sub-agent's report and delete both temp files.
+
+            """
+        : """
+            Sub-agent window (set by the user): Run sub-agents directly in your terminal with the copilot command; do not open separate windows.
+
+            """;
 
     /// <summary>Lists the user's suggested Copilot CLI sub-agent models for each step. Empty when none are set.</summary>
     public static string BuildSubagentModelGuidance(ModelPreferences? modelPreferences)

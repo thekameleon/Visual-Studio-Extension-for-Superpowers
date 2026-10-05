@@ -116,6 +116,26 @@ public sealed class AgentFileWriterTests : IDisposable
     }
 
     [Fact]
+    public void BuildContentRunsSubagentsInVisibleWindowsByDefault()
+    {
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General);
+
+        Assert.Contains("Start-Process pwsh", content);
+        Assert.Contains("-Wait", content);
+        Assert.Contains("Tee-Object", content);
+        Assert.Contains("[Console]::InputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8", content);
+    }
+
+    [Fact]
+    public void BuildContentRunsSubagentsInTheBackgroundWhenWindowsAreHidden()
+    {
+        var content = AgentFileWriter.BuildContent(SuperpowersFunction.General, new ModelPreferences { ShowCliWindows = false });
+
+        Assert.DoesNotContain("Start-Process pwsh", content);
+        Assert.Contains("Run sub-agents directly in your terminal", content);
+    }
+
+    [Fact]
     public void BuildContentListsSubagentModelsPerStep()
     {
         var preferences = new ModelPreferences

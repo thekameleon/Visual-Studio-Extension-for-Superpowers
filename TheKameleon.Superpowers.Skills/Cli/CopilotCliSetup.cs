@@ -78,6 +78,42 @@ public sealed class CopilotCliSetup(IProcessRunner runner, string configPath, Fu
 
     public static string DefaultConfigPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".copilot", "config.json");
 
+    public const string PowerShellVersionCommand = "pwsh -NoProfile -Version";
+    public const string PowerShellInstallCommand = "winget install --id Microsoft.PowerShell --exact --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity";
+    public const string PowerShellDownloadUrl = "https://aka.ms/powershell-release?tag=stable";
+    public const string WingetDownloadUrl = "https://aka.ms/getwinget";
+
+    /// <summary>Installs PowerShell 7 with winget, only on explicit request. It is not recorded as owned and is never removed.</summary>
+    public CopilotCliInstallResult InstallPowerShell()
+    {
+        if (runner.Run("winget --version", ProbeTimeout).ExitCode != 0)
+        {
+            return new CopilotCliInstallResult(false, $"winget (App Installer) was not found, so PowerShell 7 cannot be installed from here. Download PowerShell 7 from {PowerShellDownloadUrl}, or install winget from {WingetDownloadUrl} and try again.");
+        }
+
+        var result = runner.Run(PowerShellInstallCommand, InstallTimeout);
+        if (result.ExitCode == 0)
+        {
+            return new CopilotCliInstallResult(true, "PowerShell 7 installed. You may need to restart Visual Studio so it sees the updated PATH.");
+        }
+
+        var detail = string.IsNullOrWhiteSpace(result.StandardError) ? result.StandardOutput : result.StandardError;
+        return new CopilotCliInstallResult(false, $"Installing PowerShell 7 failed (exit code {result.ExitCode}): {detail.Trim()} Download it from {PowerShellDownloadUrl}");
+    }
+
+    /// <summary>Returns the installed PowerShell 7+ (pwsh) version, or null when pwsh is not on PATH.</summary>
+    public string? DetectPowerShellVersion()
+    {
+        var result = runner.Run(PowerShellVersionCommand, ProbeTimeout);
+        if (result.ExitCode != 0)
+        {
+            return null;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(result.StandardOutput, @"\d+(\.\d+)+");
+        return match.Success ? match.Value : null;
+    }
+
     public CopilotCliStatus Detect()
     {
         var result = runner.Run("copilot --version", ProbeTimeout);
@@ -181,6 +217,12 @@ public sealed class CopilotCliSetup(IProcessRunner runner, string configPath, Fu
 
 	public const string InstalledTitle = "Copilot CLI installed";
 	public const string SignInTitle = "Copilot CLI signed in";
+	public const string PowerShellTitle = "PowerShell 7";
+
+	public static StatusCheck ToPowerShellCheck(string? version) =>
+		version is not null && Version.TryParse(version, out var parsed) && parsed.Major >= 7
+			? new StatusCheck(PowerShellTitle, StatusLevel.Pass, $"PowerShell {version} (pwsh) is installed.")
+			: new StatusCheck(PowerShellTitle, StatusLevel.Fail, "PowerShell 7 (pwsh) is required to run Copilot CLI sub-agents. Select Install PowerShell 7, run: winget install --id Microsoft.PowerShell --source winget, or download it from " + PowerShellDownloadUrl);
 
 	public static StatusCheck ToInstalledCheck(CopilotCliStatus status) => status.IsInstalled
 		? new StatusCheck(InstalledTitle, StatusLevel.Pass, $"GitHub Copilot CLI {status.Version} is installed.")
