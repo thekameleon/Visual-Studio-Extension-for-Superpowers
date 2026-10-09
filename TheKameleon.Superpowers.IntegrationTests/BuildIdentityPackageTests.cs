@@ -15,7 +15,7 @@ public sealed class BuildIdentityPackageTests
         Assert.Equal(modern.PackageVersion, modern.FileVersion);
         Assert.Equal(modern.FileVersion, modern.InformationalVersion);
         Assert.True(Version.Parse(modern.PackageVersion).Revision > 0);
-        Assert.Equal(new Version(0, 9, 4, 0), modern.AssemblyVersion);
+        Assert.Equal(new Version(0, 9, 5, 0), modern.AssemblyVersion);
     }
 
     private static (string PackageVersion, string FileVersion, string InformationalVersion, Version AssemblyVersion) ReadIdentity(string name)
