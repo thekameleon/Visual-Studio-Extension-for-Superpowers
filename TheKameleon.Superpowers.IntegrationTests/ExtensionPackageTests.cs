@@ -44,11 +44,13 @@ namespace TheKameleon.Superpowers.IntegrationTests
         {
             using var package = OpenPackage();
             var targets = ReadManifest(package).Descendants(ManifestNamespace + "InstallationTarget");
-            var target = Assert.Single(targets, candidate =>
-                (string?)candidate.Element(ManifestNamespace + "ProductArchitecture") == architecture);
+            var matching = targets.Where(candidate =>
+                (string?)candidate.Element(ManifestNamespace + "ProductArchitecture") == architecture).ToArray();
 
-            Assert.Equal("Microsoft.VisualStudio.Community", (string?)target.Attribute("Id"));
-            Assert.Equal("[17.14,)", (string?)target.Attribute("Version"));
+            Assert.Equal(
+                new[] { "Microsoft.VisualStudio.Community", "Microsoft.VisualStudio.Enterprise", "Microsoft.VisualStudio.Pro" },
+                matching.Select(target => (string?)target.Attribute("Id")).Order().ToArray());
+            Assert.All(matching, target => Assert.Equal("[17.14,)", (string?)target.Attribute("Version")));
         }
 
         [Fact]

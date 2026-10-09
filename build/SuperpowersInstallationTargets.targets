@@ -1,0 +1,62 @@
+<Project>
+  <!--
+	The VisualStudio.Extensibility SDK generates obj\...\extension.vsixmanifest with only
+	Microsoft.VisualStudio.Community installation targets, so the Marketplace lists only Community.
+	Before the VSSDK merges and packages that manifest, add matching Pro and Enterprise targets
+	for every Community target (same version range and architecture).
+  -->
+  <UsingTask TaskName="AddSuperpowersEditionTargets" TaskFactory="RoslynCodeTaskFactory"
+			 AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+	<ParameterGroup>
+	  <ManifestPath ParameterType="System.String" Required="true" />
+	</ParameterGroup>
+	<Task>
+	  <Using Namespace="System.Linq" />
+	  <Using Namespace="System.Xml.Linq" />
+	  <Code Type="Fragment" Language="cs"><![CDATA[
+		XNamespace ns = "http://schemas.microsoft.com/developer/vsx-schema/2011";
+		var document = XDocument.Load(ManifestPath, LoadOptions.PreserveWhitespace);
+		var installation = document.Root.Element(ns + "Installation");
+		if (installation == null)
+		{
+			Log.LogError("The generated VSIX manifest has no Installation element: " + ManifestPath);
+			return false;
+		}
+
+		var community = installation.Elements(ns + "InstallationTarget")
+			.Where(e => (string)e.Attribute("Id") == "Microsoft.VisualStudio.Community")
+			.ToList();
+		var changed = false;
+		foreach (var source in community)
+		{
+			foreach (var edition in new[] { "Microsoft.VisualStudio.Pro", "Microsoft.VisualStudio.Enterprise" })
+			{
+				var architecture = (string)source.Element(ns + "ProductArchitecture");
+				var exists = installation.Elements(ns + "InstallationTarget").Any(e =>
+					(string)e.Attribute("Id") == edition
+					&& (string)e.Element(ns + "ProductArchitecture") == architecture);
+				if (exists)
+				{
+					continue;
+				}
+
+				var copy = new XElement(source);
+				copy.SetAttributeValue("Id", edition);
+				installation.Add(copy);
+				changed = true;
+			}
+		}
+
+		if (changed)
+		{
+			document.Save(ManifestPath);
+		}
+	  ]]></Code>
+	</Task>
+  </UsingTask>
+
+  <Target Name="AddSuperpowersEditionTargets" BeforeTargets="ValidateVsixManifest;MergeVsixManifestFile"
+		  Condition="Exists('$(IntermediateOutputPath)extension.vsixmanifest')">
+	<AddSuperpowersEditionTargets ManifestPath="$(IntermediateOutputPath)extension.vsixmanifest" />
+  </Target>
+</Project>

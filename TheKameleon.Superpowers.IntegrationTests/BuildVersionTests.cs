@@ -30,13 +30,13 @@ public sealed class BuildVersionTests : IDisposable
     public async Task ConsecutiveBuildsIncrementAndConsumerUsesOwnersVersion()
     {
         await AssertBuildAsync("Owner");
-        Assert.Equal("0.9.3.1", ReadVersion());
+        Assert.Equal("0.9.4.1", ReadVersion());
         await AssertBuildAsync("Consumer");
-        Assert.Equal("0.9.3.1", ReadVersion());
+        Assert.Equal("0.9.4.1", ReadVersion());
         Assert.Equal("1", File.ReadAllText(CounterPath));
         await AssertBuildAsync("Owner");
         await AssertBuildAsync("Consumer");
-        Assert.Equal("0.9.3.2", ReadVersion());
+        Assert.Equal("0.9.4.2", ReadVersion());
         Assert.Equal("2", File.ReadAllText(CounterPath));
     }
 
@@ -70,7 +70,7 @@ public sealed class BuildVersionTests : IDisposable
         Directory.CreateDirectory(StateDirectory);
         File.WriteAllText(CounterPath, "65534");
         await AssertBuildAsync("Owner");
-        Assert.Equal("0.9.4.1", ReadVersion());
+        Assert.Equal("0.9.5.1", ReadVersion());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class BuildVersionTests : IDisposable
     {
         await Task.WhenAll(Enumerable.Range(0, 3).Select(index => AssertBuildAsync("Owner", $"parallel-{index}.txt")));
         var versions = Enumerable.Range(0, 3).Select(index => ReadVersion($"parallel-{index}.txt")).Order().ToArray();
-        Assert.Equal(new[] { "0.9.3.1", "0.9.3.2", "0.9.3.3" }, versions);
+        Assert.Equal(new[] { "0.9.4.1", "0.9.4.2", "0.9.4.3" }, versions);
         Assert.Equal("3", File.ReadAllText(CounterPath));
     }
 

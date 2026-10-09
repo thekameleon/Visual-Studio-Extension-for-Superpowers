@@ -19,7 +19,7 @@ namespace TheKameleon.Superpowers.Vsix
                 InstallationTargetVersion = "[17.14,)",
                 Icon = "Resources\\icon.png",
                 PreviewImage = "Resources\\preview.png",
-                License = "LICENSE.txt",
+                License = "LICENSE.txt"
             },
         };
     }

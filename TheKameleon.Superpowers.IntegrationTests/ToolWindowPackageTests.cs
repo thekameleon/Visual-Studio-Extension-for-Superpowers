@@ -18,8 +18,8 @@ namespace TheKameleon.Superpowers.IntegrationTests
             var identity = Assert.Single(manifest.Descendants(manifestNamespace + "Identity"));
             Assert.True(Version.TryParse((string?)identity.Attribute("Version"), out var packageVersion));
             Assert.NotNull(packageVersion);
-            Assert.True(packageVersion > new Version(0, 9, 3, 0),
-                "The localized package must carry a per-build revision above 0.9.3.0, not reuse its cached metadata identity.");
+            Assert.True(packageVersion > new Version(0, 9, 4, 0),
+                "The localized package must carry a per-build revision above 0.9.4.0, not reuse its cached metadata identity.");
 
             using var assemblyStream = OpenRequiredEntry(package, "TheKameleon.Superpowers.Vsix.dll");
             using var assembly = new MemoryStream();
@@ -28,7 +28,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             using var peReader = new PEReader(assembly);
             var metadata = peReader.GetMetadataReader();
             var definition = metadata.GetAssemblyDefinition();
-            Assert.Equal(new Version(0, 9, 3, 0), definition.Version);
+            Assert.Equal(new Version(0, 9, 4, 0), definition.Version);
             var fileVersion = Assert.Single(definition.GetCustomAttributes(), handle =>
                 GetAttributeTypeName(metadata, handle) == "AssemblyFileVersionAttribute");
             var reader = metadata.GetBlobReader(metadata.GetCustomAttribute(fileVersion).Value);

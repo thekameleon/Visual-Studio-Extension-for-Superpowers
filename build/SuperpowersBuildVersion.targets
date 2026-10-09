@@ -42,7 +42,7 @@
 			if (previous < 0 || previous >= 65534L * 65534L)
 				throw new InvalidOperationException("The Superpowers build counter is invalid or exhausted; it must not be reset silently.");
 			long next = previous + 1;
-			BuildVersion = string.Format(CultureInfo.InvariantCulture, "0.9.{0}.{1}", 3 + (next - 1) / 65534, 1 + (next - 1) % 65534);
+			BuildVersion = string.Format(CultureInfo.InvariantCulture, "0.9.{0}.{1}", 4 + (next - 1) / 65534, 1 + (next - 1) % 65534);
 			var temporaryPath = counterPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
 			try
 			{
@@ -84,7 +84,7 @@
 		  Condition="'$(SuperpowersBuildRole)' != ''">
 	<PropertyGroup>
 	  <_SuperpowersMetadataVersion>$(SuperpowersBuildVersion)</_SuperpowersMetadataVersion>
-	  <_SuperpowersMetadataVersion Condition="'$(_SuperpowersMetadataVersion)' == ''">0.9.3.0</_SuperpowersMetadataVersion>
+	  <_SuperpowersMetadataVersion Condition="'$(_SuperpowersMetadataVersion)' == ''">0.9.4.0</_SuperpowersMetadataVersion>
 	  <_SuperpowersMetadataBuild>$([System.Version]::Parse('$(_SuperpowersMetadataVersion)').Build)</_SuperpowersMetadataBuild>
 	  <_SuperpowersMetadataRevision>$([System.Version]::Parse('$(_SuperpowersMetadataVersion)').Revision)</_SuperpowersMetadataRevision>
 	  <_SuperpowersMetadataSource>$(IntermediateOutputPath)SuperpowersBuildVersion.g.cs</_SuperpowersMetadataSource>
