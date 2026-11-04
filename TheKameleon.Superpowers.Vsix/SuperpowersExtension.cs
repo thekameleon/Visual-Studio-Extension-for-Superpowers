@@ -16,7 +16,8 @@ namespace TheKameleon.Superpowers.Vsix
                 displayName: "Superpowers for Visual Studio",
                 description: "Installs the Superpowers skills and a Superpowers agent for GitHub Copilot Chat in Visual Studio. This gives Superpowers functionality to Github Copilot Chat for structured AI workflows, reusable skills, project intelligence.")
             {
-                InstallationTargetVersion = "[17.14,)",
+                InstallationTargetVersion = "[18.5,)",
+                DotnetTargetVersions = ["net10.0"],
                 Icon = "Resources\\icon.png",
                 PreviewImage = "Resources\\preview.png",
                 License = "LICENSE.txt"

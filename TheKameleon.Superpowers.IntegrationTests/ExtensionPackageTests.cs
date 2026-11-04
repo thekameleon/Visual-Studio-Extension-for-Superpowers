@@ -20,7 +20,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.NotNull(metadata);
             var identity = metadata.Element(ManifestNamespace + "Identity");
             Assert.NotNull(identity);
-            Assert.Equal("TheKameleon.Superpowers.Vsix.8a7fab37-7cfc-4314-ae3c-946698f3ff5d", (string?)identity.Attribute("Id"));
+            Assert.Equal("TheKameleon-Superpowers", (string?)identity.Attribute("Id"));
             Assert.Equal("TheKameleon", (string?)identity.Attribute("Publisher"));
             Assert.True(Version.TryParse((string?)identity.Attribute("Version"), out _));
             Assert.Equal("Superpowers for Visual Studio", (string?)metadata.Element(ManifestNamespace + "DisplayName"));
@@ -34,7 +34,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
 
             Assert.NotNull(installation);
             Assert.Equal("VisualStudio.Extensibility", (string?)installation.Attribute("ExtensionType"));
-            Assert.Equal("net8.0", (string?)installation.Element(ManifestNamespace + "DotnetTargetVersions"));
+            Assert.Equal("net10.0", (string?)installation.Element(ManifestNamespace + "DotnetTargetVersions"));
         }
 
         [Theory]
@@ -50,7 +50,7 @@ namespace TheKameleon.Superpowers.IntegrationTests
             Assert.Equal(
                 new[] { "Microsoft.VisualStudio.Community", "Microsoft.VisualStudio.Enterprise", "Microsoft.VisualStudio.Pro" },
                 matching.Select(target => (string?)target.Attribute("Id")).Order().ToArray());
-            Assert.All(matching, target => Assert.Equal("[17.14,)", (string?)target.Attribute("Version")));
+            Assert.All(matching, target => Assert.Equal("[18.5,)", (string?)target.Attribute("Version")));
         }
 
         [Fact]

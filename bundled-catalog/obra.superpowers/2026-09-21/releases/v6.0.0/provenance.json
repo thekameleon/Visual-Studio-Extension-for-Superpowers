@@ -1,4 +1,4 @@
-﻿{
+{
     "schemaVersion":  1,
     "repositoryUrl":  "https://github.com/obra/superpowers",
     "releaseId":  340316134,
@@ -29,7 +29,7 @@
                   },
                   {
                       "path":  "platform-metadata.json",
-                      "sha256":  "62a69e281217fcd6feac5eb313409025bac0b32ea8800757719b0881c3d459b3"
+                      "sha256":  "1b8c95c1a44ab1f44062b6061d5cd398b48c132f4485ea1be8001efead57c6df"
                   },
                   {
                       "path":  "execute-metadata.json",

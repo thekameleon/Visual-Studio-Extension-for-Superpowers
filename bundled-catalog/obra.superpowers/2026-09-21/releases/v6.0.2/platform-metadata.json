@@ -4,8 +4,7 @@
   "menuLabel": "Superpowers",
   "hostModel": "VisualStudio.Extensibility",
   "supportedIdeVersions": [
-    "17.14+",
-    "18.x"
+    "18.5+"
   ],
   "defaultExecutionMode": "Guided",
   "supportedExecutionModes": [

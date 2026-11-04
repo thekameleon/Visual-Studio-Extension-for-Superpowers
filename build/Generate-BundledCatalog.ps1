@@ -84,7 +84,7 @@ foreach ($release in $releaseItems)
 		product = 'SuperPowers for Visual Studio'
 		menuLabel = 'Superpowers'
 		hostModel = 'VisualStudio.Extensibility'
-		supportedIdeVersions = @('17.14+', '18.x')
+		supportedIdeVersions = @('18.5+')
 		defaultExecutionMode = 'Guided'
 		supportedExecutionModes = @('Guided', 'ApprovalRequired', 'Full')
 		compatibility = [ordered]@{
